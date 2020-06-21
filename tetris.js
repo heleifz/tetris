@@ -4,7 +4,8 @@ const globalConfig = {
     lines: 22, // 俄罗斯方块行数 
     columnSize: 10,
     blockSizeInPixels: 30,
-    lockDelay: 500 // lock delay 毫秒数
+    lockDelay: 500, // lock delay 毫秒数
+    preview: true // 下坠预览
 }
 var uiCanvas = document.getElementById("ui");
 var canvas = document.getElementById("game");
@@ -23,6 +24,16 @@ function loadImage(path) {
 function rowSpeedForLevel(level) {
     const levelTime = Math.pow(0.8 - ((level - 1) * 0.007), level - 1)
     return levelTime * 1000
+}
+
+// 随机排列组合
+function shuffle(array) {
+    for (var i = array.length - 1; i > 0; i--) {
+        var j = Math.floor(Math.random() * (i + 1));
+        var temp = array[i];
+        array[i] = array[j];
+        array[j] = temp;
+    }
 }
 
 // 彩色纸片飞散效果
@@ -106,14 +117,11 @@ class Renderer {
 
     drawUI() {
         const ctx = this.uiCanvas.getContext('2d')
-        ctx.fillStyle = '#404040'
-        ctx.fillRect(0, 0, this.uiCanvas.width, this.uiCanvas.height)
-
-        ctx.fillStyle = 'black'
+        ctx.fillStyle = 'rgb(0,0,0,0.8)'
         ctx.fillRect(this.gameX, this.gameY, this.gameWidth, this.height)
         // 画网格
         for (var i = 1; i < this.config.columnSize; ++i) {
-            ctx.strokeStyle = 'rgb(40,40,40)'
+            ctx.strokeStyle = 'rgb(60,60,60)'
             ctx.lineWidth = 1
             ctx.beginPath();
             ctx.moveTo(this.gameX + i * this.config.blockSizeInPixels, this.gameY)
@@ -121,17 +129,13 @@ class Renderer {
             ctx.stroke(); 
         }
         for (var i = 1; i < this.config.lines; ++i) {
-            ctx.strokeStyle = 'rgb(40,40,40)'
+            ctx.strokeStyle = 'rgb(60,60,60)'
             ctx.lineWidth = 1
             ctx.beginPath();
             ctx.moveTo(this.gameX, this.gameY + i * this.config.blockSizeInPixels)
             ctx.lineTo(this.gameX + this.gameWidth, this.gameY + i * this.config.blockSizeInPixels)
             ctx.stroke(); 
         }
-        // ctx.strokeStyle = '#18de02'
-        ctx.strokeStyle = 'black'
-        ctx.lineWidth = 1
-        ctx.strokeRect(this.gameX, this.gameY + 2, this.gameWidth, this.height - 2)
         return this;
     }
 
@@ -144,11 +148,12 @@ class Renderer {
         ctx.clearRect(x, y, width, height)
     }
 
-    drawBlock(row, col, style) {
+    drawBlock(row, col, style, trans) {
         var x = col * this.config.blockSizeInPixels + this.gameX
         var y = (row - 2) * this.config.blockSizeInPixels + this.gameY
         const ctx = this.canvas.getContext('2d')
         const offset = this.skin.colorPosition[style]
+        ctx.globalAlpha = trans
         ctx.drawImage(this.skin.image, offset[0], offset[1], this.skin.blockSize, this.skin.blockSize, 
                       x, y, this.config.blockSizeInPixels, this.config.blockSizeInPixels)
     }
@@ -164,7 +169,47 @@ class BlockType {
 
         this.shapes = shapes
         this.style = style
-        this.kickRule = kickRule
+        this.kickTable = null
+        if (kickRule == "other") {
+            this.kickTable = {
+                "0": {
+                    "1": [[0, 0], [-1, 0], [-1, 1],	[0,-2], [-1,-2]],
+                    "3": [[0, 0], [1, 0], [1, 1], [0,-2], [1, -2]],
+                }, 
+                "1": {
+                    "2": [[0, 0], [1, 0], [1,-1], [0, 2], [1, 2]],
+                    "0": [[0, 0], [1, 0], [1,-1], [0, 2], [1, 2]],
+                }, 
+                "2": {
+                    "3": [[0, 0], [1, 0], [1, 1],[0,-2], [1,-2]],
+                    "1": [[0, 0], [-1, 0], [-1, 1], [0,-2], [-1,-2]],
+                }, 
+                "3": {
+                    "0": [[0, 0], [-1, 0], [-1,-1], [0, 2], [-1, 2]],
+                    "2": [[0, 0], [-1, 0], [-1,-1], [0, 2], [-1, 2]],
+                } 
+            }
+        } else if (kickRule == "I") {
+            this.kickTable = {
+                "0": {
+                    "1": [[0, 0], [-2, 0], [1, 0], [-2,-1], [1, 2]],
+                    "3": [[0, 0], [-1, 0], [2, 0], [-1, 2], [2,-1]],
+                }, 
+                "1": {
+                    "2": [[0, 0], [-1, 0], [2, 0], [-1, 2], [2,-1]],
+                    "0": [[0, 0], [2, 0], [-1, 0], [2, 1], [-1,-2]],
+                }, 
+                "2": {
+                    "3": [[0, 0], [2, 0], [-1, 0], [2, 1], [-1,-2]],
+                    "1": [[0, 0], [1, 0], [-2, 0], [1,-2], [-2, 1]],
+                }, 
+                "3": {
+                    "0": [[0, 0], [1, 0], [-2, 0], [1,-2], [-2, 1]],
+                    "2": [[0, 0], [-2, 0], [1, 0], [-2,-1], [1, 2]],
+                }  
+            }
+        }
+
         this.offsets = []
         this.boundingBoxWidth = shapes[0][1].length
 
@@ -182,14 +227,19 @@ class BlockType {
         }
     }
 
-    // row, col = bounding box 左上角的坐标
-    positions(row, col, rotation) {
-        var mod = 0
+    getRotationNumber(rotation) {
+        var mod
         if (rotation < 0) {
             mod = (4 - (-rotation % 4)) % 4
         } else {
             mod = rotation % 4
         }
+        return mod 
+    }
+
+    // row, col = bounding box 左上角的坐标
+    positions(row, col, rotation) {
+        var mod = this.getRotationNumber(rotation)
         const offset = this.offsets[mod]
         var result = [];
         for (var i = 0; i < offset.length; ++i) {
@@ -213,15 +263,38 @@ class BlockType {
         return false
     }
 
+    rotate(stack, row, col, rotation, direction) {
+        const from = this.getRotationNumber(rotation)
+        const to = this.getRotationNumber(rotation + direction)
+
+        // 无kick规则情况
+        if (this.kickTable == null) {
+            if (!this.collide(stack, row, col, to)) {
+                return [row, col, to]
+            } else {
+                return [row, col, from] 
+            }
+        }
+        const seq = this.kickTable[from][to]
+        for (var i in seq) {
+            const offset = seq[i]
+            if (!this.collide(stack, row - offset[1], col + offset[0], to)) {
+                return [row - offset[1], col + offset[0], to]
+            }
+        }
+        console.log("fail..")
+        return [row, col, from] 
+    }
+
     // 方块操作代码
     move(stack, row, col, rotation, action) {
         var newRow = row
         var newCol = col
         var newRotation = rotation
         if (action == "clockwise") {
-            newRotation += 1
+            return this.rotate(stack, row, col, rotation, 1)
         } else if (action == "counter_clockwise") {
-            newRotation -= 1
+            return this.rotate(stack, row, col, rotation, -1)
         } else if (action == "left") {
             newCol -= 1           
         } else if (action == "right") {
@@ -274,7 +347,7 @@ var JBlock = new BlockType([
      [0,1,0],
      [1,1,0]]
 
-], null, 'blue')
+], "other", 'blue')
 
 var ZBlock = new BlockType([ 
 
@@ -294,7 +367,7 @@ var ZBlock = new BlockType([
      [1,1,0],
      [1,0,0]]
 
-], null, 'red')
+], "other", 'red')
 
 var LBlock = new BlockType([ 
 
@@ -314,7 +387,7 @@ var LBlock = new BlockType([
      [0,1,0],
      [0,1,0]]
 
-], null, 'orange')
+], "other", 'orange')
 
 var IBlock = new BlockType([ 
    
@@ -338,7 +411,7 @@ var IBlock = new BlockType([
      [0,1,0,0],
      [0,1,0,0]]
 
-], null, 'cyan')
+], "I", 'cyan')
 
 var OBlock = new BlockType([ 
    
@@ -378,7 +451,7 @@ var TBlock = new BlockType([
      [1,1,0],
      [0,1,0]]
 
-], null, 'purple')
+], "other", 'purple')
 
 var SBlock = new BlockType([ 
 
@@ -398,10 +471,10 @@ var SBlock = new BlockType([
      [1,1,0],
      [0,1,0]]
 
-], null, 'green')
+], "other", 'green')
 
 const gameOverAnimation = function () {
-    var progress = 0
+    var progress = 1
     return function (game) {
         const ctx = game.render.getAnimationContext()
         const height = game.render.height 
@@ -430,11 +503,11 @@ const gameOverAnimation = function () {
 
 function clearLineAnimation(lines) {
     var toClear = lines
-    var progress = 0
+    var progress = 1
     return function (game) {
 
         const ctx = game.render.getAnimationContext()
-        if (progress < 14) {
+        if (progress < 18) {
             for (var i in lines) {
                 const row = lines[i]
 
@@ -442,24 +515,24 @@ function clearLineAnimation(lines) {
                 var y = (row - 2) * game.config.blockSizeInPixels + game.render.gameY
                 var height = game.config.blockSizeInPixels
                 var width = game.render.gameWidth
-                if (progress <= 7) {
-                    const trans = progress / 7.0
+                if (progress <= 9) {
+                    const trans = progress / 9.0
                     ctx.fillStyle = "rgba(255,255,255," + trans + ")";
                 } else {
-                    if (progress == 8) {
+                    if (progress == 10) {
                         game.render.eraseLine(row)
                     }
-                    const trans = 1.0 - ((progress - 7) / 6.0)
+                    const trans = 1.0 - ((progress - 9) / 8.0)
                     ctx.fillStyle = "rgba(255,255,255," + trans + ")";
-                    height = height * (1.0 - (progress - 7) / 6.0)
-                    width = width * (1.0 - (progress - 7) / 6.0)
+                    height = height * (1.0 - (progress - 9) / 8.0)
+                    width = width * (1.0 - (progress - 9) / 8.0)
                     y = y + (game.config.blockSizeInPixels - height) / 2
                     x = x + (game.render.gameWidth - width) / 2
                 }
                 ctx.fillRect(x, y, width, height)
             }
             progress += 1
-        } else if (progress == 14) {
+        } else if (progress == 18) {
             if (game.afterPause !== null) {
                 game.afterPause()
                 game.afterPause = null
@@ -470,7 +543,7 @@ function clearLineAnimation(lines) {
 }
 
 function highlightAnimation(positions) {
-    var progress = 0
+    var progress = 1
 
     return function (game) {
         if (progress < 16) {
@@ -481,17 +554,12 @@ function highlightAnimation(positions) {
                 var y = (p[0] - 2) * game.config.blockSizeInPixels + game.render.gameY
                 if (progress <= 8) {
                     const trans = 0.8 * (progress / 8)
-                    const strokeTrans =  0.8 * (progress / 8)
                     ctx.fillStyle = "rgba(255,255,255," + trans + ")";
-                    ctx.strokeStyle = "rgba(255,255,255," + strokeTrans + ")";
                 } else {
                     const trans = 0.8 - 0.8 * ((progress - 8) / 7.0)
-                    const strokeTrans = 0.8 - 0.8 * ((progress - 8) / 7.0)
                     ctx.fillStyle = "rgba(255,255,255," + trans + ")";
-                    ctx.strokeStyle = "rgba(255,255,255," + strokeTrans + ")";
                 }
                 ctx.fillRect(x, y, game.config.blockSizeInPixels, game.config.blockSizeInPixels)
-                ctx.strokeRect(x, y, game.config.blockSizeInPixels, game.config.blockSizeInPixels)
             }
             progress += 1
         } else {
@@ -501,7 +569,7 @@ function highlightAnimation(positions) {
 }
 
 function hardDropAnimation(positions, render) {
-    var progress = 0 
+    var progress = 1 
 
     var minRow = null
     var minCol = null
@@ -512,7 +580,6 @@ function hardDropAnimation(positions, render) {
         const p = positions[i]
         const row = p[0]
         const col = p[1]
-        console.log("row", row)
         if (minRow == null || row < minRow) {
             minRow = row
         }
@@ -523,31 +590,34 @@ function hardDropAnimation(positions, render) {
            maxCol = col 
         }
     }
-    console.log(minRow)
 
     const minX = render.gameX + minCol * render.config.blockSizeInPixels
     const maxX = render.gameX + (maxCol + 1) * render.config.blockSizeInPixels
     const endY = render.gameY + (minRow - 2) * render.config.blockSizeInPixels - 5
 
-    console.log(minX, maxX, minCol, maxCol)
-
     var dropLines = []
     const lineHeight = 100
-    for (var x = minX; x <= maxX; x += (maxX - minX) / 3) {
-        dropLines.push([x + 20 * (0.5 - Math.random()), endY - lineHeight - Math.random() * 5, 3, lineHeight * (1 - 0.1 * Math.random())])
+    for (var x = minX; x <= maxX; x += 20) {
+        for (var i = 0; i < 2; ++i) {
+            const realX = x + 30 * (0.5 - Math.random())
+            if (realX < (game.render.gameX + game.render.gameWidth) && realX > game.render.gameX) {
+                dropLines.push([realX, endY - lineHeight - Math.random() * 150, 6 * Math.random(), lineHeight * (1 - 0.1 * Math.random())])
+            }
+        }
     }
     return function (game) {
         const ctx = game.render.getAnimationContext()
         if (progress < 8) {
             for (var i in dropLines) {
                 const line = dropLines[i]
-                var gradient = ctx.createLinearGradient(line[0], line[1], line[0], line[1] + lineHeight)
+                const lineY = line[1] - 0.5 * lineHeight * (progress / 8.0)
+                var gradient = ctx.createLinearGradient(line[0], lineY, line[0], lineY + line[3])
                 var pos = 0.7 * progress / 8
                 gradient.addColorStop(pos, "rgb(80,80,80,0)")
-                gradient.addColorStop(0.7, "rgb(80,80,80,1.0)");
+                gradient.addColorStop(0.7, "rgb(100,100,100,0.5)");
                 gradient.addColorStop(1, "rgb(80,80,80,0)");
                 ctx.fillStyle = gradient;
-                ctx.fillRect(line[0], line[1], line[2], line[3])
+                ctx.fillRect(line[0], lineY, line[2], line[3])
             }
             progress += 1
         } else {
@@ -567,6 +637,8 @@ class Game {
         this.animations = []
         this.render.drawUI()
         this.afterPause = null
+        this.keyPressed = {}
+        this.keyTimer = {}
     }
 
     createEmptyStack(showLines) {
@@ -583,11 +655,8 @@ class Game {
 
     run(level) {
         this.level = level
-        this.restartFallTimer()
+        this.resetFallTimer()
         const that = this;
-        setInterval(function () {
-            that.lockDelay()  
-        }, 50)
         // 全局动画处理
         setInterval(function () {
             that.doAnimation()  
@@ -610,26 +679,20 @@ class Game {
         this.animations = newAnimation
     }
 
-    restartFallTimer() {
+    resetFallTimer() {
         clearTimeout(this.fallTimerId)
         this.levelTime = rowSpeedForLevel(this.level)
         const that = this;
         this.fallTimerId = setTimeout(function () {
             that.stateMachine("fall")
-            that.restartFallTimer()
+            that.resetFallTimer()
         }, this.levelTime);
     }
 
-    lockDelay() {
-        if (this.landing === true && this.state == "dropping") {
-            this.delayCounter += 1
-            if (this.delayCounter >= this.maxDelayCounter) {
-                this.lockBlock()
-            }
-        }
-    }
-
     lockBlock() {
+        if (this.block == null) {
+            return
+        }
         this.state = "restart"
         var positions = this.block.positions(this.position[0], this.position[1], this.rotation)
         this.animations.push(highlightAnimation(positions))
@@ -670,108 +733,128 @@ class Game {
         }
         return [cleared, newStack]
     }
-
+      
     drawAllElements() {
         this.render.clearElements()
         if (this.block !== null) {
             var positions = this.block.positions(this.position[0], this.position[1], this.rotation)
             for (var i = 0; i < positions.length; ++i) {
                 this.render.drawBlock(positions[i][0], positions[i][1], 
-                                      this.block.style)
+                                      this.block.style, 1.0)
+            }
+        }
+        if (this.state == "dropping" && this.config.preview == true) {
+            const hardDropPosition = this.block.move(this.stack, this.position[0], this.position[1], this.rotation, "hard_drop")
+            if (hardDropPosition[0] != this.position[0] || hardDropPosition[1] != this.position[1]) {
+                var predicted = this.block.positions(hardDropPosition[0], hardDropPosition[1], hardDropPosition[2])
+                for (var i = 0; i < predicted.length; ++i) {
+                    this.render.drawBlock(predicted[i][0], predicted[i][1], this.block.style, 0.3)
+                }
             }
         }
         for (var i = 0; i < this.stack.length; i++) {
             for (var j = 0; j < this.stack[i].length; ++j) {
                 if (this.stack[i][j] !== null) {
-                    this.render.drawBlock(i, j, this.stack[i][j])
+                    this.render.drawBlock(i, j, this.stack[i][j], 1.0)
                 }
             }
         }
     }
 
+    resetDelayTimer() {
+        clearTimeout(this.lockDelayTimer)
+        const that = this
+        this.lockDelayTimer = setTimeout(function () {
+            that.lockBlock()
+        }, this.config.lockDelay)
+    }
+
+    pickBlock() {
+        if (this.randomBlocks.length == 0) {
+            for (var i in this.candidates) {
+                this.randomBlocks.push(this.candidates[i])
+            }
+            shuffle(this.randomBlocks)
+        }
+        return this.randomBlocks.shift()
+    }
+
     stateMachine(action) {
         if (this.state == "begin") {
-            // 初始化方块
             this.afterPause = null
             this.animations = []
+            this.randomBlocks = []
             this.render.clearAnimation()
             this.stack = this.createEmptyStack()
-            this.block = this.candidates[Math.floor(Math.random() * this.candidates.length)];
+            this.block = this.pickBlock()
             const center = Math.floor(this.config.columnSize / 2)
             const boxWidth = this.block.boundingBoxWidth
             const x = 0
             const y = center - Math.ceil(boxWidth / 2)
-            this.delayCounter = 0
-            this.maxDelayCounter = Math.round(this.config.lockDelay / 50)
+            this.resetDelayTimer()
             this.position = [x, y]
             this.rotation = 0
-            this.landing = false
             this.state = "dropping"
         } else if (this.state == "dropping") {
             if (action == "fall")  {
                 if (!this.block.collide(this.stack, this.position[0] + 1, this.position[1], this.rotation)) {
                     this.position[0] += 1
+                    this.resetDelayTimer()
                 }
-                if (!this.block.collide(this.stack, this.position[0] + 1, this.position[1], this.rotation)) {
-                    this.landing = false
-                } else {
-                    this.landing = true
-                    const clearResult = this.clearLines()
-                    if (clearResult[0].length > 0) {
-                        this.state = "pause_game"
-                        this.animations.push(clearLineAnimation(clearResult[0]))
-                        this.restartFallTimer()
-                        this.afterPause = function () {
-                            this.state = "restart"
-                            this.block = null
-                            this.stack = clearResult[1]
-                        }
+                const clearResult = this.clearLines()
+                if (clearResult[0].length > 0) {
+                    this.state = "pause_game"
+                    this.animations.push(clearLineAnimation(clearResult[0]))
+                    this.resetFallTimer()
+                    this.afterPause = function () {
+                        this.state = "restart"
+                        this.block = null
+                        this.stack = clearResult[1]
                     }
                 }
-            } else if (action != "other_key") {
+            } else {
                 const nextMove = this.block.move(this.stack, this.position[0], this.position[1], this.rotation, action)
+                if (nextMove[0] != this.position[0] || nextMove[1] != this.position[1] || nextMove[2] != this.rotation) {
+                    this.resetDelayTimer()
+                }
                 this.position = [nextMove[0], nextMove[1]]
                 this.rotation = nextMove[2]
+                if (action == "hard_drop") {
+                    var positions = this.block.positions(this.position[0], this.position[1], this.rotation)
+                    this.animations.push(hardDropAnimation(positions, this.render))
+                }
                 if (!this.block.collide(this.stack, this.position[0] + 1, this.position[1], this.rotation)) {
-                    this.landing = false
                     if (action == "hard_drop") {
-                        var positions = this.block.positions(this.position[0], this.position[1], this.rotation)
-                        this.animations.push(hardDropAnimation(positions, this.render))
                         this.lockBlock()
-                        this.restartFallTimer()
+                        this.resetFallTimer()
                     }
                 } else {
-                    this.landing = true
                     const clearResult = this.clearLines()
                     if (clearResult[0].length > 0) {
                         this.state = "pause_game"
                         this.animations.push(clearLineAnimation(clearResult[0]))
-                        this.restartFallTimer()
                         this.afterPause = function () {
                             this.state = "restart"
                             this.block = null
                             this.stack = clearResult[1]
                         }
                     } else if (action == "hard_drop") {
-                        var positions = this.block.positions(this.position[0], this.position[1], this.rotation)
-                        this.animations.push(hardDropAnimation(positions, this.render))
                         this.lockBlock()
                     }
-                    this.restartFallTimer()
+                    this.resetFallTimer()
                 }
             }
         } else if (this.state == "restart" && action == "fall") {
             // 初始化方块
-            this.block = this.candidates[Math.floor(Math.random() * this.candidates.length)];
+            this.block = this.pickBlock()
             const center = Math.floor(this.config.columnSize / 2)
             const boxWidth = this.block.boundingBoxWidth
             const x = 1
             const y = center - Math.ceil(boxWidth / 2)
-            this.delayCounter = 0
-            this.maxDelayCounter = Math.round(this.config.lockDelay / 50)
+            this.resetDelayTimer()
+            
             this.position = [x, y]
             this.rotation = 0
-            this.landing = false
 
             if (this.block.collide(this.stack, this.position[0], this.position[1], this.rotation)) {
                 this.state = "over"
@@ -802,7 +885,7 @@ class Game {
         this.drawAllElements()
     }
 
-    control(key) {
+    control(key, type) {
         const keyMap = {
             ArrowLeft: "left",
             ArrowRight: "right",
@@ -810,12 +893,35 @@ class Game {
             ArrowUp: "clockwise",
             Space: "hard_drop"
         }
-        if (key in keyMap) {
-            this.stateMachine(keyMap[key])
-        } else {
-            this.stateMachine("other_key")
+        if (!(key in keyMap)) {
+            return
         }
-            
+        var action = keyMap[key]
+        var noPress = 1
+        if (action in this.keyPressed && this.keyPressed[action] == 1) {
+            noPress = 0
+        }
+        if (type == "down") {
+            this.keyPressed[action] = 1
+            this.stateMachine(action)
+            if (action == "left" || action == "right" || action == "down") {
+                if (noPress) {
+                    const that = this
+                    function pressFunc() {
+                        if (that.keyPressed[action] == 1) {
+                            that.stateMachine(action)
+                            setTimeout(pressFunc, 30)
+                        }
+                    }
+                    clearTimeout(this.keyTimer[action])
+                    this.keyTimer[action] = setTimeout(pressFunc, 150)
+                }
+            }
+        } else {
+            this.keyPressed[action] = 0
+            clearTimeout(this.keyTimer[action])
+            this.keyTimer[action] = null
+        }
     }
 
     async ready() {
@@ -826,11 +932,12 @@ class Game {
 const game = new Game(animationCanvas, uiCanvas, canvas, globalConfig)
 game.ready().then(function () {
 
-    // game.test()
     game.run(5)
     document.addEventListener('keydown', function (e) {
-        console.log(e.code)
-        game.control(e.code)
+        game.control(e.code, 'down')
+    })
+    document.addEventListener('keyup', function (e) {
+        game.control(e.code, 'up')
     })
     
 })
