@@ -36,14 +36,43 @@ function shuffle(array) {
     }
 }
 
-// 彩色纸片飞散效果
-class Particle {
+// 单个飞散粒子
+function createParticle(renderParticle, x, y, angleInDegree, speed, gravity, rotateSpeed, lifeSpan) {
+    var progress = 0
+    const angle = 2 * Math.PI - (((angleInDegree % (360)) / 360) * (2 * Math.PI))
+    var xInitSpeed = Math.cos(angle) * speed
+    var yInitSpeed = Math.sin(angle) * speed
+    return function (game) {
+        var trans = 1.0 - (progress / lifeSpan)
+        var rotate = (((rotateSpeed * progress) % 360) / 360) * (2 * Math.PI)
+        var xPosition = x + xInitSpeed * progress
+        var yPosition = y + yInitSpeed * progress + 0.01 * gravity * (progress * progress)
+        renderParticle(xPosition, yPosition, rotate, trans)
+        if (progress == lifeSpan) {
+            return null
+        }
+        progress += 1
+        return 1
+    }
+}
+
+// 随机颜色方块粒子
+function randomColorBlockParticle() {
+    var candidateColor = ["rgb(255,29,88,", "rgb(24,89,144,", "rgb(255,246,133,", "rgb(0,221,255,", "rgb(0,73,183,"]
+    const color = candidateColor[Math.floor(Math.random() * candidateColor.length)]
+    const size = Math.random() * 10
+    return function (xPosition, yPosition, rotate, trans) {
+        const ctx = game.render.getAnimationContext()
+        ctx.fillStyle = color + trans + ")"
+        ctx.fillRect(xPosition, yPosition, size, size)
+    }
 }
 
 class Renderer {
 
     constructor(animationCanvas, uiCanvas, canvas, config) {
         this.animationCanvas = animationCanvas
+        this.animationContext = null
         this.uiCanvas = uiCanvas
         this.canvas = canvas
         this.config = config
@@ -102,7 +131,10 @@ class Renderer {
     }
 
     getAnimationContext() {
-        return this.animationCanvas.getContext('2d')
+        if (this.animationContext === null) {
+            this.animationContext = this.animationCanvas.getContext('2d')
+        }
+        return this.animationContext
     }
 
     clearAnimation() {
@@ -505,8 +537,11 @@ function clearLineAnimation(lines) {
     var toClear = lines
     var progress = 1
     return function (game) {
-
+        var particleNum = 5
         const ctx = game.render.getAnimationContext()
+        if (lines.length > 10) {
+            particleNum = 2
+        }
         if (progress < 18) {
             for (var i in lines) {
                 const row = lines[i]
@@ -515,9 +550,11 @@ function clearLineAnimation(lines) {
                 var y = (row - 2) * game.config.blockSizeInPixels + game.render.gameY
                 var height = game.config.blockSizeInPixels
                 var width = game.render.gameWidth
+                // 第一阶段：变亮
                 if (progress <= 9) {
                     const trans = progress / 9.0
                     ctx.fillStyle = "rgba(255,255,255," + trans + ")";
+                // 第二阶段：化作彩色粒子飞散消失
                 } else {
                     if (progress == 10) {
                         game.render.eraseLine(row)
@@ -528,6 +565,14 @@ function clearLineAnimation(lines) {
                     width = width * (1.0 - (progress - 9) / 8.0)
                     y = y + (game.config.blockSizeInPixels - height) / 2
                     x = x + (game.render.gameWidth - width) / 2
+                    for (var i = 0; i < particleNum; ++i) {
+                        var particle = createParticle(randomColorBlockParticle(), 
+                            x, y + game.config.blockSizeInPixels / 2, (90 + (135 - 90) * Math.random()), 10 + 5 * Math.random(), 30, 20, 40)
+                        game.animations.push(particle)
+                        particle = createParticle(randomColorBlockParticle(), 
+                            x + width, y + game.config.blockSizeInPixels / 2, 45 + (90 - 45) * Math.random(), 10 + 5 * Math.random(), 30, 20, 40)
+                        game.animations.push(particle)
+                    }
                 }
                 ctx.fillRect(x, y, width, height)
             }
@@ -845,6 +890,8 @@ class Game {
                 }
             }
         } else if (this.state == "restart" && action == "fall") {
+
+
             // 初始化方块
             this.block = this.pickBlock()
             const center = Math.floor(this.config.columnSize / 2)
