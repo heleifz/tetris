@@ -36,6 +36,19 @@ function shuffle(array) {
     }
 }
 
+function msToTime(duration) {
+    var milliseconds = parseInt((duration % 1000) / 100),
+      seconds = Math.floor((duration / 1000) % 60),
+      minutes = Math.floor((duration / (1000 * 60)) % 60),
+      hours = Math.floor((duration / (1000 * 60 * 60)) % 24)
+  
+    hours = (hours < 10) ? "0" + hours : hours
+    minutes = (minutes < 10) ? "0" + minutes : minutes
+    seconds = (seconds < 10) ? "0" + seconds : seconds
+  
+    return hours + ":" + minutes + ":" + seconds
+  }
+
 // 单个飞散粒子
 function createParticle(renderParticle, x, y, angleInDegree, speed, gravity, rotateSpeed, lifeSpan) {
     var progress = 0
@@ -58,13 +71,16 @@ function createParticle(renderParticle, x, y, angleInDegree, speed, gravity, rot
 
 // 随机颜色方块粒子
 function randomColorBlockParticle() {
-    var candidateColor = ["rgb(255,29,88,", "rgb(24,89,144,", "rgb(255,246,133,", "rgb(0,221,255,", "rgb(0,73,183,"]
+    var candidateColor = ["rgb(255,29,88)", "rgb(24,89,144)", "rgb(255,246,133)", "rgb(0,221,255)", "rgb(0,73,183)"]
     const color = candidateColor[Math.floor(Math.random() * candidateColor.length)]
     const size = Math.random() * 10
+    const ctx = game.render.getAnimationContext()
     return function (xPosition, yPosition, rotate, trans) {
-        const ctx = game.render.getAnimationContext()
-        ctx.fillStyle = color + trans + ")"
+        ctx.save()
+        ctx.fillStyle = color
+        ctx.globalAlpha = trans
         ctx.fillRect(xPosition, yPosition, size, size)
+        ctx.restore()
     }
 }
 
@@ -89,6 +105,14 @@ class Renderer {
         
         this.gameX = (this.width - this.gameWidth) / 2
         this.gameY = 0
+
+        this.boardX = this.gameX + this.gameWidth + 20
+        this.boardY = this.gameY  
+        this.boardTextX = this.boardX + 20
+        this.boardPreviewY = this.boardY + 60
+        this.boardScoreY = this.boardY + 210
+        this.boardLineY = this.boardY + 290
+        this.boardTimeY = this.boardY + 370
     }
 
     async loadResource() {
@@ -168,7 +192,27 @@ class Renderer {
             ctx.lineTo(this.gameX + this.gameWidth, this.gameY + i * this.config.blockSizeInPixels)
             ctx.stroke(); 
         }
+        // 计分牌
+        ctx.fillRect(this.boardX, this.boardY, 200, 400)
+        ctx.font = "20px courier";
+        ctx.fillStyle = "white";
+        ctx.fillText("下个方块", this.boardTextX, this.boardY + 30);
+        ctx.fillText("目前得分", this.boardTextX, this.boardY + 170);
+        ctx.fillText("消除行数", this.boardTextX, this.boardY + 250);
+        ctx.fillText("游戏时间", this.boardTextX, this.boardY + 330);
+
         return this;
+    }
+
+    drawStats(nextBlock, score, lines, time) {
+        const ctx = this.canvas.getContext('2d')
+
+        ctx.font = "18px courier";
+        ctx.fillStyle = "white";
+        ctx.fillText(score, this.boardTextX, this.boardScoreY)
+        ctx.fillText(lines, this.boardTextX, this.boardLineY)
+        ctx.fillText(time, this.boardTextX, this.boardTimeY)
+        this.drawNextBlock(nextBlock)
     }
 
     eraseLine(row) {
@@ -185,9 +229,27 @@ class Renderer {
         var y = (row - 2) * this.config.blockSizeInPixels + this.gameY
         const ctx = this.canvas.getContext('2d')
         const offset = this.skin.colorPosition[style]
+        ctx.save()
         ctx.globalAlpha = trans
         ctx.drawImage(this.skin.image, offset[0], offset[1], this.skin.blockSize, this.skin.blockSize, 
                       x, y, this.config.blockSizeInPixels, this.config.blockSizeInPixels)
+        ctx.restore()
+    }
+
+    drawNextBlock(block) {
+        if (block == null) {
+            return
+        }
+        var positions = block.positions(0, 0, 0)
+        const offset = this.skin.colorPosition[block.style]
+        const ctx = this.canvas.getContext('2d')
+        for (var i = 0; i < positions.length; ++i) {
+            var x = positions[i][1] * this.config.blockSizeInPixels + this.boardTextX + 25
+            var y = positions[i][0] * this.config.blockSizeInPixels + this.boardPreviewY
+            ctx.drawImage(this.skin.image, offset[0], offset[1], this.skin.blockSize, this.skin.blockSize, 
+                          x, y, this.config.blockSizeInPixels, this.config.blockSizeInPixels)
+        }
+        console.log('done')
     }
 
 }
@@ -536,13 +598,16 @@ const gameOverAnimation = function () {
 function clearLineAnimation(lines) {
     var toClear = lines
     var progress = 1
+    var totalLength = 20
+    const firstPhase = Math.round(totalLength * 0.4)
+    const secondPhase = totalLength - firstPhase
     return function (game) {
         var particleNum = 5
         const ctx = game.render.getAnimationContext()
         if (lines.length > 10) {
             particleNum = 2
         }
-        if (progress < 18) {
+        if (progress < totalLength) {
             for (var i in lines) {
                 const row = lines[i]
 
@@ -551,19 +616,19 @@ function clearLineAnimation(lines) {
                 var height = game.config.blockSizeInPixels
                 var width = game.render.gameWidth
                 // 第一阶段：变亮
-                if (progress <= 9) {
-                    const trans = progress / 9.0
+                if (progress <= firstPhase) {
+                    const trans = progress / firstPhase
                     ctx.fillStyle = "rgba(255,255,255," + trans + ")";
                 // 第二阶段：化作彩色粒子飞散消失
                 } else {
-                    if (progress == 10) {
+                    if (progress == firstPhase + 1) {
                         game.render.eraseLine(row)
                     }
-                    const trans = 1.0 - ((progress - 9) / 8.0)
+                    const trans = 1.0 - ((progress - firstPhase) / secondPhase)
                     ctx.fillStyle = "rgba(255,255,255," + trans + ")";
-                    height = height * (1.0 - (progress - 9) / 8.0)
-                    width = width * (1.0 - (progress - 9) / 8.0)
-                    y = y + (game.config.blockSizeInPixels - height) / 2
+                    // height = height // * (1.0 - (progress - firstPhase) / secondPhase)
+                    width = width * (1.0 - (progress - firstPhase) / secondPhase)
+                    // y = y // + (game.config.blockSizeInPixels - height) / 2
                     x = x + (game.render.gameWidth - width) / 2
                     for (var i = 0; i < particleNum; ++i) {
                         var particle = createParticle(randomColorBlockParticle(), 
@@ -577,7 +642,7 @@ function clearLineAnimation(lines) {
                 ctx.fillRect(x, y, width, height)
             }
             progress += 1
-        } else if (progress == 18) {
+        } else if (progress == totalLength) {
             if (game.afterPause !== null) {
                 game.afterPause()
                 game.afterPause = null
@@ -684,6 +749,14 @@ class Game {
         this.afterPause = null
         this.keyPressed = {}
         this.keyTimer = {}
+        this.block = null
+        this.nextBlock = null
+        this.stack = null
+        this.score = 0
+        this.comboCount = 0
+        this.clearCount = 0
+        this.beginTime = null
+        this.endTime = null
     }
 
     createEmptyStack(showLines) {
@@ -702,17 +775,16 @@ class Game {
         this.level = level
         this.resetFallTimer()
         const that = this;
-        // 全局动画处理
-        setInterval(function () {
+        function redraw() {
+            that.drawAllElements()
             that.doAnimation()  
-        }, 16)
+            requestAnimationFrame(redraw)
+        }
+        redraw()
     }
 
     doAnimation() {
         this.render.clearAnimation()
-        if (this.animations.length == 0) {
-            return
-        }
         var newAnimation = []
         for (var i = 0; i < this.animations.length; ++i) {
             const animation = this.animations[i]
@@ -738,11 +810,29 @@ class Game {
         if (this.block == null) {
             return
         }
-        this.state = "restart"
+        this.resetFallTimer()
+        // 高亮锁定块
         var positions = this.block.positions(this.position[0], this.position[1], this.rotation)
         this.animations.push(highlightAnimation(positions))
-        for (var i = 0; i < positions.length; ++i) {
-            this.stack[positions[i][0]][positions[i][1]] = this.block.style
+        // 看是否能消除
+        const clearResult = this.clearLines()
+        const updatedScore = this.getClearLineScore(clearResult[0].length)
+        if (clearResult[0].length > 0) {
+            this.state = "pause_game"
+            this.animations.push(clearLineAnimation(clearResult[0]))
+            this.afterPause = function () {
+                this.comboCount = updatedScore[0]
+                this.score = updatedScore[1]
+                this.clearCount = updatedScore[2]
+                this.state = "restart"
+                this.block = null
+                this.stack = clearResult[1]
+            }
+        } else {
+            this.state = "restart"
+            for (var i = 0; i < positions.length; ++i) {
+                this.stack[positions[i][0]][positions[i][1]] = this.block.style
+            }
         }
     }
 
@@ -797,13 +887,24 @@ class Game {
                 }
             }
         }
-        for (var i = 0; i < this.stack.length; i++) {
-            for (var j = 0; j < this.stack[i].length; ++j) {
-                if (this.stack[i][j] !== null) {
-                    this.render.drawBlock(i, j, this.stack[i][j], 1.0)
+        if (this.stack != null) {
+            for (var i = 0; i < this.stack.length; i++) {
+                for (var j = 0; j < this.stack[i].length; ++j) {
+                    if (this.stack[i][j] !== null) {
+                        this.render.drawBlock(i, j, this.stack[i][j], 1.0)
+                    }
                 }
             }
         }
+        // 显示分数板
+        var useTime = 0
+        if (this.beginTime !== null && this.endTime == null) {
+            var currentTime = Date.now()
+            useTime = currentTime - this.beginTime
+        } else if (this.endTime != null) {
+            useTime = this.endTime - this.beginTime
+        }
+        this.render.drawStats(this.nextBlock, this.score, this.clearCount, msToTime(useTime))
     }
 
     resetDelayTimer() {
@@ -824,6 +925,36 @@ class Game {
         return this.randomBlocks.shift()
     }
 
+    getClearLineScore(clearLineCount) {
+        var newCombo = 0
+        var newScore = this.score
+        var newClearCount = this.clearCount + clearLineCount
+        if (clearLineCount > 0) {
+            newCombo += this.comboCount + 1
+            if (clearLineCount == 1) {
+                newScore += 100 * this.level
+            } else if (clearLineCount == 2) {
+                newScore += 300 * this.level
+            } else if (clearLineCount == 3) {
+                newScore += 500 * this.level
+            } else if (clearLineCount == 4) {
+                newScore += 800 * this.level
+            }
+            if (newCombo > 1) {
+                newScore += this.level * (newCombo - 1) * 50
+            }
+        }
+        return [newCombo, newScore, newClearCount]
+    }
+
+    updateDropScore(dropCell, type) {
+        if (type == 'soft') {
+            this.score += dropCell
+        } else if (type == 'hard') {
+            this.score += 2 * dropCell
+        }
+    }
+
     stateMachine(action) {
         if (this.state == "begin") {
             this.afterPause = null
@@ -832,6 +963,7 @@ class Game {
             this.render.clearAnimation()
             this.stack = this.createEmptyStack()
             this.block = this.pickBlock()
+            this.nextBlock = this.pickBlock()
             const center = Math.floor(this.config.columnSize / 2)
             const boxWidth = this.block.boundingBoxWidth
             const x = 0
@@ -840,60 +972,40 @@ class Game {
             this.position = [x, y]
             this.rotation = 0
             this.state = "dropping"
+            this.score = 0
+            this.comboCount = 0
+            this.clearCount = 0
+            this.beginTime = Date.now()
+            this.endTime = null
+
         } else if (this.state == "dropping") {
-            if (action == "fall")  {
-                if (!this.block.collide(this.stack, this.position[0] + 1, this.position[1], this.rotation)) {
-                    this.position[0] += 1
-                    this.resetDelayTimer()
-                }
-                const clearResult = this.clearLines()
-                if (clearResult[0].length > 0) {
-                    this.state = "pause_game"
-                    this.animations.push(clearLineAnimation(clearResult[0]))
-                    this.resetFallTimer()
-                    this.afterPause = function () {
-                        this.state = "restart"
-                        this.block = null
-                        this.stack = clearResult[1]
-                    }
-                }
-            } else {
-                const nextMove = this.block.move(this.stack, this.position[0], this.position[1], this.rotation, action)
-                if (nextMove[0] != this.position[0] || nextMove[1] != this.position[1] || nextMove[2] != this.rotation) {
-                    this.resetDelayTimer()
-                }
-                this.position = [nextMove[0], nextMove[1]]
-                this.rotation = nextMove[2]
-                if (action == "hard_drop") {
-                    var positions = this.block.positions(this.position[0], this.position[1], this.rotation)
-                    this.animations.push(hardDropAnimation(positions, this.render))
-                }
-                if (!this.block.collide(this.stack, this.position[0] + 1, this.position[1], this.rotation)) {
-                    if (action == "hard_drop") {
-                        this.lockBlock()
-                        this.resetFallTimer()
-                    }
-                } else {
-                    const clearResult = this.clearLines()
-                    if (clearResult[0].length > 0) {
-                        this.state = "pause_game"
-                        this.animations.push(clearLineAnimation(clearResult[0]))
-                        this.afterPause = function () {
-                            this.state = "restart"
-                            this.block = null
-                            this.stack = clearResult[1]
-                        }
-                    } else if (action == "hard_drop") {
-                        this.lockBlock()
-                    }
-                    this.resetFallTimer()
-                }
+            var dropType = null
+            if (action == "down") {
+                dropType = 'soft'
+            } else if (action == "hard_drop") {
+                dropType = "hard"
             }
-        } else if (this.state == "restart" && action == "fall") {
+            if (action == "fall") {
+                action = "down" 
+            }
+            const nextMove = this.block.move(this.stack, this.position[0], this.position[1], this.rotation, action)
+            if (nextMove[0] != this.position[0] || nextMove[1] != this.position[1] || nextMove[2] != this.rotation) {
+                this.resetDelayTimer()
+            }
+            const dropCell = nextMove[0] - this.position[0]
+            this.updateDropScore(dropCell, dropType)
 
-
+            this.position = [nextMove[0], nextMove[1]]
+            this.rotation = nextMove[2]
+            if (action == "hard_drop") {
+                var positions = this.block.positions(this.position[0], this.position[1], this.rotation)
+                this.animations.push(hardDropAnimation(positions, this.render))
+                this.lockBlock()
+            }
+        } else if (this.state == "restart") {
             // 初始化方块
-            this.block = this.pickBlock()
+            this.block = this.nextBlock
+            this.nextBlock = this.pickBlock()
             const center = Math.floor(this.config.columnSize / 2)
             const boxWidth = this.block.boundingBoxWidth
             const x = 1
@@ -902,16 +1014,20 @@ class Game {
             
             this.position = [x, y]
             this.rotation = 0
-
             if (this.block.collide(this.stack, this.position[0], this.position[1], this.rotation)) {
                 this.state = "over"
                 this.block = null
                 this.stateMachine("over")
             } else {
+                // 在游戏 restart 时，如果发生移动按键，马上产生效果，保证操作感够灵敏
                 this.state = "dropping"
+                if (action != "fall") {
+                    this.stateMachine(action)
+                }
             }
         } else if (this.state == "over") {
             if (action == "over") {
+                this.endTime = Date.now()
                 var allLines = []
                 for (var i = 0; i < this.stack.length; ++i) {
                     allLines.push(i)
@@ -929,7 +1045,6 @@ class Game {
         } else if (this.state == "pause_game") {
             return
         }
-        this.drawAllElements()
     }
 
     control(key, type) {
