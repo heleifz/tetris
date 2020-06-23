@@ -92,20 +92,20 @@ class Renderer {
         this.uiCanvas = uiCanvas
         this.canvas = canvas
         this.config = config
-        this.width = 1024
+        this.width = window.innerWidth
         this.gameWidth = this.config.blockSizeInPixels * this.config.columnSize
         this.height = this.config.blockSizeInPixels * this.config.lines
+        this.windowHeight = window.innerHeight
+        this.gameX = (this.width - this.gameWidth) / 2
+        this.gameY = (window.innerHeight - this.height) / 2
     
         this.canvas.width = this.width
-        this.canvas.height = this.height + 1
+        this.canvas.height = window.innerHeight
         this.uiCanvas.width = this.width
-        this.uiCanvas.height = this.height + 1
+        this.uiCanvas.height = window.innerHeight
         this.animationCanvas.width = this.width
-        this.animationCanvas.height = this.height + 1
+        this.animationCanvas.height = window.innerHeight
         
-        this.gameX = (this.width - this.gameWidth) / 2
-        this.gameY = 0
-
         this.boardX = this.gameX + this.gameWidth + 20
         this.boardY = this.gameY  
         this.boardTextX = this.boardX + 20
@@ -175,6 +175,7 @@ class Renderer {
         const ctx = this.uiCanvas.getContext('2d')
         ctx.fillStyle = 'rgb(0,0,0,0.8)'
         ctx.fillRect(this.gameX, this.gameY, this.gameWidth, this.height)
+        console.log(this.gameX, this.gameY, this.gameWidth, this.height)
         // 画网格
         for (var i = 1; i < this.config.columnSize; ++i) {
             ctx.strokeStyle = 'rgb(60,60,60)'
@@ -225,6 +226,9 @@ class Renderer {
     }
 
     drawBlock(row, col, style, trans) {
+        if (row < 2) {
+            return
+        }
         var x = col * this.config.blockSizeInPixels + this.gameX
         var y = (row - 2) * this.config.blockSizeInPixels + this.gameY
         const ctx = this.canvas.getContext('2d')
@@ -249,7 +253,6 @@ class Renderer {
             ctx.drawImage(this.skin.image, offset[0], offset[1], this.skin.blockSize, this.skin.blockSize, 
                           x, y, this.config.blockSizeInPixels, this.config.blockSizeInPixels)
         }
-        console.log('done')
     }
 
 }
@@ -376,7 +379,6 @@ class BlockType {
                 return [row - offset[1], col + offset[0], to]
             }
         }
-        console.log("fail..")
         return [row, col, from] 
     }
 
@@ -571,19 +573,19 @@ const gameOverAnimation = function () {
     var progress = 1
     return function (game) {
         const ctx = game.render.getAnimationContext()
-        const height = game.render.height 
+        const height = game.render.windowHeight 
         const width = game.render.width
         const bannerHeight = 200 * (progress / 20.0)
         const trans = 0.8 * (progress / 20.0)
 
         ctx.fillStyle = "rgba(50,50,50," + trans + ")";
-        ctx.fillRect(0, (height - bannerHeight) / 2, width, bannerHeight)
+        ctx.fillRect(0, (height - bannerHeight) / 2 * 0.8, width, bannerHeight)
 
         if (progress > 10) {
             ctx.font = "48px courier";
             ctx.fillStyle = "rgba(251,226,81," + ((progress - 10)/10) + ")";
             const textMetric = ctx.measureText("GAME OVER");
-            ctx.fillText("GAME OVER", (width - textMetric.width) / 2, (height + 18) / 2);
+            ctx.fillText("GAME OVER", (width - textMetric.width) / 2,  bannerHeight / 2 + (height - bannerHeight) / 2 * 0.8);
         }
 
         if (progress == 20) {
@@ -598,7 +600,7 @@ const gameOverAnimation = function () {
 function clearLineAnimation(lines) {
     var toClear = lines
     var progress = 1
-    var totalLength = 20
+    var totalLength = 18
     const firstPhase = Math.round(totalLength * 0.4)
     const secondPhase = totalLength - firstPhase
     return function (game) {
@@ -707,11 +709,13 @@ function hardDropAnimation(positions, render) {
 
     var dropLines = []
     const lineHeight = 100
-    for (var x = minX; x <= maxX; x += 20) {
-        for (var i = 0; i < 2; ++i) {
-            const realX = x + 30 * (0.5 - Math.random())
-            if (realX < (game.render.gameX + game.render.gameWidth) && realX > game.render.gameX) {
-                dropLines.push([realX, endY - lineHeight - Math.random() * 150, 6 * Math.random(), lineHeight * (1 - 0.1 * Math.random())])
+    if (minRow > 5) {
+        for (var x = minX; x <= maxX; x += 20) {
+            for (var i = 0; i < 2; ++i) {
+                const realX = x + 30 * (0.5 - Math.random())
+                if (realX < (game.render.gameX + game.render.gameWidth) && realX > game.render.gameX) {
+                    dropLines.push([realX, Math.max(game.render.gameY, endY - lineHeight - Math.random() * 150), 6 * Math.random(), lineHeight * (1 - 0.1 * Math.random())])
+                }
             }
         }
     }
@@ -724,7 +728,7 @@ function hardDropAnimation(positions, render) {
                 var gradient = ctx.createLinearGradient(line[0], lineY, line[0], lineY + line[3])
                 var pos = 0.7 * progress / 8
                 gradient.addColorStop(pos, "rgb(80,80,80,0)")
-                gradient.addColorStop(0.7, "rgb(100,100,100,0.5)");
+                gradient.addColorStop(0.7, "rgb(100,100,100,0.8)");
                 gradient.addColorStop(1, "rgb(80,80,80,0)");
                 ctx.fillStyle = gradient;
                 ctx.fillRect(line[0], lineY, line[2], line[3])
@@ -1076,7 +1080,7 @@ class Game {
                         }
                     }
                     clearTimeout(this.keyTimer[action])
-                    this.keyTimer[action] = setTimeout(pressFunc, 150)
+                    this.keyTimer[action] = setTimeout(pressFunc, 250)
                 }
             }
         } else {
@@ -1104,4 +1108,15 @@ game.ready().then(function () {
     
 })
 
+
+// function onResize() {
+
+// }
+
+// window.addEventListener("load", function() {
+//     onResize()
+// });
+// window.addEventListener("resize", function() { 
+//     onResize()
+//  });
 
