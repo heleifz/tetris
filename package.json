@@ -1,0 +1,22 @@
+{
+  "name": "tetris",
+  "version": "1.0.0",
+  "description": "tetris game reinvented",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/heleifz/tetris.git"
+  },
+  "keywords": [
+    "tetris"
+  ],
+  "author": "He Lei",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/heleifz/tetris/issues"
+  },
+  "homepage": "https://github.com/heleifz/tetris#readme"
+}

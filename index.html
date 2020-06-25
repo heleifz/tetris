@@ -16,6 +16,8 @@
             /* Prevent the ugly blue highlighting from accidental selection of text */ user-select: none;
             /* Disable long touch hold select */ -webkit-touch-callout: none !important;
             overflow: hidden;
+            top: 0; bottom: 0; left: 0; right: 0;
+            
         }
         @media only screen and (min-width: 800px)
         {
@@ -40,11 +42,11 @@
 </head>
 <body>
     <div id="wrapper">
-        <div id="gamwcontainer">
-            <canvas id="ui" style="position: absolute; left: 0; top: 0; z-index: 0;"></canvas>
-            <canvas id="game" style="position: absolute; left: 0; top: 0; z-index: 1; "></canvas>
-            <canvas id="animation" style="position: absolute; left: 0; top: 0; z-index: 2; "></canvas>
-            <canvas id="gamepad" style="position: absolute; left: 0; top: 0; z-index: 3; "></canvas>
+        <div id="gamwcontainer" style="height:100%;width:100%">
+            <canvas id="ui" style="position: absolute; left: 0; top: 0; z-index: 0; height:100%; width:100%"></canvas>
+            <canvas id="game" style="position: absolute; left: 0; top: 0; z-index: 1; height:100%; width: 100%"></canvas>
+            <canvas id="animation" style="position: absolute; left: 0; top: 0; z-index: 2; height:100%; width: 100%"></canvas>
+            <canvas id="gamepad" style="position: absolute; left: 0; top: 0; z-index: 3; height:100%; width: 100%"></canvas>
         </div>
     </div>
     <div style="font-family: pixeboy;color: rgba(0,0,0,0)">1</div>

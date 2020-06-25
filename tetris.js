@@ -109,6 +109,14 @@ function buttonTouchDistance(x, y, radius, touch) {
     }
 }
 
+function setUpCanvas(canvas) {
+    let dpi = window.devicePixelRatio;
+    let style_height = +getComputedStyle(canvas).getPropertyValue("height").slice(0, -2);
+    let style_width = +getComputedStyle(canvas).getPropertyValue("width").slice(0, -2);
+    canvas.height = style_height * dpi
+    canvas.width = style_width * dpi
+}
+
 class Renderer {
 
     constructor(animationCanvas, uiCanvas, canvas, gamePadCanvas, config) {
@@ -123,8 +131,9 @@ class Renderer {
 
         this.isTouch = isTouchDevice()
         this.animationContext = null
-        this.width = window.innerWidth
-        this.windowHeight = window.innerHeight
+        let dpi = window.devicePixelRatio
+        this.width = window.innerWidth * dpi
+        this.windowHeight = window.innerHeight * dpi
 
         const gameRatio = Math.round(this.config.columnSize * 1.4) / this.config.lines
         let mobileScreen = false
@@ -139,19 +148,22 @@ class Renderer {
         this.height = this.blockSizeInPixels * this.config.lines
         this.gameX = Math.round((this.width - this.gameWidth * 1.4) / 2)
         if (mobileScreen && this.isTouch) {
-            this.gameY = Math.round((window.innerHeight - this.height) / 7)
+            this.gameY = Math.round((this.windowHeight - this.height) / 7)
         } else {
-            this.gameY = Math.round((window.innerHeight - this.height) / 2)
+            this.gameY = Math.round((this.windowHeight - this.height) / 2)
         }
-    
-        this.canvas.width = this.width
-        this.canvas.height = window.innerHeight
-        this.uiCanvas.width = this.width
-        this.uiCanvas.height = window.innerHeight
-        this.animationCanvas.width = this.width
-        this.animationCanvas.height = window.innerHeight
-        this.gamePadCanvas.width = this.width
-        this.gamePadCanvas.height = window.innerHeight
+        // this.canvas.width = this.width
+        // this.canvas.height = window.innerHeight
+        // this.uiCanvas.width = this.width
+        // this.uiCanvas.height = window.innerHeight
+        // this.animationCanvas.width = this.width
+        // this.animationCanvas.height = window.innerHeight
+        // this.gamePadCanvas.width = this.width
+        // this.gamePadCanvas.height = window.innerHeight
+        setUpCanvas(this.canvas)
+        setUpCanvas(this.uiCanvas)
+        setUpCanvas(this.animationCanvas)
+        setUpCanvas(this.gamePadCanvas)
 
         // 预览窗格
         this.titleHeight = Math.round(this.height / 30)
@@ -177,26 +189,26 @@ class Renderer {
         this.holdY = this.timeY + this.scoreHeight + this.titleHeight
         this.holdHeight = Math.round(previewHeight * 1.2)
         
-        this.dropButtonX = this.width * 0.15
-        this.dropButtonY = this.windowHeight * 0.9
-        this.dropButtonRadius = 40
-        this.holdButtonX = this.width * 0.35
-        this.holdButtonY = this.windowHeight * 0.9
+        const dropButtonX = this.width * 0.15
+        const dropButtonY = this.windowHeight * 0.9
+        const dropButtonRadius = 100
+        const holdButtonX = this.width * 0.35
+        const holdButtonY = this.windowHeight * 0.9
         
-        this.buttonRadius = 30
-        this.upButtonX = this.width * 0.83
-        this.upButtonY = this.windowHeight * 0.83
-        this.leftButtonX = this.width * 0.83 - 1.1 * this.buttonRadius
-        this.leftButtonY = this.windowHeight * 0.91
-        this.rightButtonX = this.width * 0.83 + 1.1 * this.buttonRadius
-        this.rightButtonY = this.windowHeight * 0.91
+        const buttonRadius = 80
+        const upButtonX = this.width * 0.83
+        const upButtonY = this.windowHeight * 0.84
+        const leftButtonX = this.width * 0.83 - 1.1 * buttonRadius
+        const leftButtonY = this.windowHeight * 0.91
+        const rightButtonX = this.width * 0.83 + 1.1 * buttonRadius
+        const rightButtonY = this.windowHeight * 0.91
 
         this.virtualButtons = [
-            [this.upButtonX, this.upButtonY, this.buttonRadius, 'TouchUp'],
-            [this.leftButtonX, this.leftButtonY, this.buttonRadius, 'TouchLeft'],
-            [this.rightButtonX, this.rightButtonY, this.buttonRadius, 'TouchRight'],
-            [this.dropButtonX, this.dropButtonY, this.dropButtonRadius, 'TouchDrop'],
-            [this.holdButtonX, this.holdButtonY, this.buttonRadius, 'TouchHold'],
+            [upButtonX, upButtonY, buttonRadius, 'TouchUp'],
+            [leftButtonX, leftButtonY, buttonRadius, 'TouchLeft'],
+            [rightButtonX, rightButtonY, buttonRadius, 'TouchRight'],
+            [dropButtonX, dropButtonY, dropButtonRadius, 'TouchDrop'],
+            [holdButtonX, holdButtonY, buttonRadius, 'TouchHold'],
         ]
     }
 
@@ -359,9 +371,9 @@ class Renderer {
         }
         ctx.fillStyle = "white";
         ctx.fillText(score, this.titleX + 2, this.scoreY + this.titleHeight)
-        ctx.font = (this.titleHeight - 3) + "px ka1";
+        ctx.font = (this.titleHeight - 7) + "px ka1";
         ctx.fillText(lines, this.titleX + 2, this.clearLineY + this.titleHeight)
-        ctx.font = (this.titleHeight - 3) + "px ka1";
+        ctx.font = (this.titleHeight - 7) + "px ka1";
         ctx.fillText(time, this.titleX + 2, this.timeY + this.titleHeight)
         this.drawHold(hold)
         this.drawNextBlock(nextBlocks)
