@@ -98,28 +98,30 @@ function randomColorBlockParticle() {
 }
 
 
-function buttonTouchDistance(x, y, radius, touch) {
-    let touchX = touch.pageX
-    let touchY = touch.pageY
-    let dist = Math.sqrt(((x - touchX) ** 2) + ((y - touchY) ** 2))
-    if (dist <= radius) {
-        return dist
-    } else {
-        return null
-    }
-}
 
-function setUpCanvas(canvas) {
-    let dpi = window.devicePixelRatio;
-    let style_height = +getComputedStyle(canvas).getPropertyValue("height").slice(0, -2);
-    let style_width = +getComputedStyle(canvas).getPropertyValue("width").slice(0, -2);
-    canvas.height = style_height * dpi
-    canvas.width = style_width * dpi
-}
 
 class Renderer {
 
+    setUpCanvas(canvas) {
+        let style_height = +getComputedStyle(canvas).getPropertyValue("height").slice(0, -2);
+        let style_width = +getComputedStyle(canvas).getPropertyValue("width").slice(0, -2);
+        canvas.height = style_height * this.dpr
+        canvas.width = style_width * this.dpr
+    }
+    
+    buttonTouchDistance(x, y, radius, touch) {
+        let touchX = touch.pageX * this.dpr
+        let touchY = touch.pageY * this.dpr
+        let dist = Math.sqrt(((x - touchX) ** 2) + ((y - touchY) ** 2))
+        if (dist <= radius) {
+            return dist
+        } else {
+            return null
+        }
+    }
+
     constructor(animationCanvas, uiCanvas, canvas, gamePadCanvas, config) {
+        this.dpr = window.devicePixelRatio || 1
         this.animationCanvas = animationCanvas
         this.uiCanvas = uiCanvas
         this.canvas = canvas
@@ -131,9 +133,8 @@ class Renderer {
 
         this.isTouch = isTouchDevice()
         this.animationContext = null
-        let dpi = window.devicePixelRatio
-        this.width = window.innerWidth * dpi
-        this.windowHeight = window.innerHeight * dpi
+        this.width = window.innerWidth * this.dpr
+        this.windowHeight = window.innerHeight * this.dpr
 
         const gameRatio = Math.round(this.config.columnSize * 1.4) / this.config.lines
         let mobileScreen = false
@@ -160,10 +161,10 @@ class Renderer {
         // this.animationCanvas.height = window.innerHeight
         // this.gamePadCanvas.width = this.width
         // this.gamePadCanvas.height = window.innerHeight
-        setUpCanvas(this.canvas)
-        setUpCanvas(this.uiCanvas)
-        setUpCanvas(this.animationCanvas)
-        setUpCanvas(this.gamePadCanvas)
+        this.setUpCanvas(this.canvas)
+        this.setUpCanvas(this.uiCanvas)
+        this.setUpCanvas(this.animationCanvas)
+        this.setUpCanvas(this.gamePadCanvas)
 
         // 预览窗格
         this.titleHeight = Math.round(this.height / 30)
@@ -216,7 +217,7 @@ class Renderer {
         let minDist = null
         let button = null
         for (let b of this.virtualButtons) {
-            let d = buttonTouchDistance(b[0], b[1], b[2], touch)
+            let d = this.buttonTouchDistance(b[0], b[1], b[2], touch)
             if (d !== null && (minDist == null || d < minDist)) {
                 minDist = d
                 button = b
