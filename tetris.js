@@ -1322,7 +1322,7 @@ window.addEventListener("load", function () {
         }
         function onTouchEnd(e) {
             var touches = e.changedTouches;
-            const radius = 10
+            const radius = 18
             for (let i = 0; i < touches.length; i++) {
                 let t = touches[i] 
                 const idx = game.indexForOngoingTouch(t)
@@ -1336,16 +1336,25 @@ window.addEventListener("load", function () {
                             game.control(control, "up")
                         }
                     /// swipe left
-                    } else if (Math.abs(xDiff) > Math.abs(yDiff) && xDiff < -radius) {
+                    } else if (Math.abs(xDiff) > Math.abs(yDiff) && xDiff < - 10 * radius) {
+                        game.control("TouchLeft", "down")
                         game.control("TouchLeft", "down")
                         game.control("TouchLeft", "down")
                         game.control("TouchLeft", "up")
+                    } else if (Math.abs(xDiff) > Math.abs(yDiff) && xDiff < -radius) {
+                        game.control("TouchLeft", "down")
+                        game.control("TouchLeft", "up")
                     // swipe right
-                    } else if (Math.abs(xDiff) > Math.abs(yDiff) && xDiff > radius) {
+                    } else if (Math.abs(xDiff) > Math.abs(yDiff) && xDiff > 10 * radius) {
+                        game.control("TouchRight", "down")
                         game.control("TouchRight", "down")
                         game.control("TouchRight", "down")
                         game.control("TouchRight", "up")
                     // swift down
+                    } else if (Math.abs(xDiff) > Math.abs(yDiff) && xDiff > radius) {
+                        game.control("TouchRight", "down")
+                        game.control("TouchRight", "up")
+                    // swipe right
                     } else if (Math.abs(yDiff) > Math.abs(xDiff) && yDiff > radius) {
                         game.control("TouchDrop", 'down')
                     }
