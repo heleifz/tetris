@@ -168,8 +168,11 @@ class Renderer {
         // 时间
         this.timeY = this.clearLineY + this.scoreHeight + this.titleHeight
         this.timeHeight = this.scoreHeight
+        // regret
+        this.regretY = this.timeY + this.scoreHeight + this.titleHeight
+        this.regretHeight = this.scoreHeight
         // hold
-        this.holdY = this.timeY + this.scoreHeight + this.titleHeight
+        this.holdY = this.regretY + this.scoreHeight + this.titleHeight
         this.holdHeight = Math.round(previewHeight * 1.2)
         
     }
@@ -241,15 +244,15 @@ class Renderer {
             ctx.beginPath()
             ctx.moveTo(this.gameX + i * this.blockSizeInPixels, this.gameY)
             ctx.lineTo(this.gameX + i * this.blockSizeInPixels, this.height + this.gameY)
-            ctx.stroke(); 
+            ctx.stroke()
         }
         for (let i = 1; i < this.config.lines; ++i) {
             ctx.strokeStyle = 'rgb(60,60,60)'
             ctx.lineWidth = 1
-            ctx.beginPath();
+            ctx.beginPath()
             ctx.moveTo(this.gameX, this.gameY + i * this.blockSizeInPixels)
             ctx.lineTo(this.gameX + this.gameWidth, this.gameY + i * this.blockSizeInPixels)
-            ctx.stroke(); 
+            ctx.stroke()
         }
         // 预览窗格
         ctx.fillStyle = 'rgb(0,0,0,0.85)'
@@ -293,11 +296,19 @@ class Renderer {
         ctx.fillText("time", this.titleX, this.timeY);
         ctx.fillStyle = 'rgb(0,0,0,0.6)'
         ctx.fillRect(this.titleX, this.timeY, this.titleWidth, this.timeHeight)
+        // regret
+        ctx.fillStyle = 'rgb(0,0,0,0.85)'
+        ctx.fillRect(this.titleX, this.regretY - this.titleHeight, this.titleWidth, this.titleHeight)
+        ctx.fillStyle = "white"
+        ctx.font = (this.titleHeight + 1) + "px pixeboy";
+        ctx.fillText("redo", this.titleX, this.regretY);
+        ctx.fillStyle = 'rgb(0,0,0,0.6)'
+        ctx.fillRect(this.titleX, this.regretY, this.titleWidth, this.regretHeight)
 
         return this;
     }
 
-    drawStats(hold, nextBlocks, score, lines, time) {
+    drawStats(hold, nextBlocks, score, lines, time, regret) {
         const ctx = this.canvas.getContext('2d')
         // 分数字体大小自适应
         let scoreSize = this.titleHeight - 3
@@ -313,8 +324,8 @@ class Renderer {
         ctx.fillText(score, this.titleX + 2, this.scoreY + this.titleHeight)
         ctx.font = (this.titleHeight - 7) + "px ka1";
         ctx.fillText(lines, this.titleX + 2, this.clearLineY + this.titleHeight)
-        ctx.font = (this.titleHeight - 7) + "px ka1";
         ctx.fillText(time, this.titleX + 2, this.timeY + this.titleHeight)
+        ctx.fillText(regret, this.titleX + 2, this.regretY + this.titleHeight)
         this.drawHold(hold)
         this.drawNextBlock(nextBlocks)
     }
@@ -908,6 +919,7 @@ class Game {
         this.holdTime = 0
         this.stack = null
         this.score = 0
+        this.regretTime = 0
         this.comboCount = 0
         this.clearCount = 0
         this.beginTime = null
@@ -995,6 +1007,7 @@ class Game {
                 this.comboCount = updatedScore[0]
                 this.score = updatedScore[1]
                 this.clearCount = updatedScore[2]
+                this.regretTime += updatedScore[3]
                 this.state = "restart"
                 this.block = null
                 this.stack = clearResult[1]
@@ -1075,7 +1088,7 @@ class Game {
         } else if (this.endTime != null) {
             useTime = this.endTime - this.beginTime
         }
-        this.render.drawStats(this.hold, this.nextBlocks, this.score, this.clearCount, msToTime(useTime))
+        this.render.drawStats(this.hold, this.nextBlocks, this.score, this.clearCount, msToTime(useTime), this.regretTime)
     }
 
     resetDelayTimer() {
@@ -1100,6 +1113,7 @@ class Game {
         let newCombo = 0
         let newScore = this.score
         let newClearCount = this.clearCount + clearLineCount
+        let newRegret = 0
         if (clearLineCount > 0) {
             newCombo += this.comboCount + 1
             if (clearLineCount == 1) {
@@ -1110,12 +1124,13 @@ class Game {
                 newScore += 500 * this.level
             } else if (clearLineCount == 4) {
                 newScore += 800 * this.level
+                newRegret = 1
             }
             if (newCombo > 1) {
                 newScore += this.level * (newCombo - 1) * 50
             }
         }
-        return [newCombo, newScore, newClearCount]
+        return [newCombo, newScore, newClearCount, newRegret]
     }
 
     updateDropScore(dropCell, type) {
@@ -1137,6 +1152,7 @@ class Game {
             this.nextBlocks = [this.pickBlock(), this.pickBlock(), this.pickBlock()]
             this.hold = null
             this.holdTime = 0
+            this.regretTime = 1
             const center = Math.floor(this.config.columnSize / 2)
             const boxWidth = this.block.boundingBoxWidth
             const x = 0
@@ -1151,7 +1167,7 @@ class Game {
             this.beginTime = Date.now()
             this.endTime = null
 
-        } else if (this.state == "dropping" && action != 'hold') {
+        } else if (this.state == "dropping" && action != 'hold' && action != 'regret') {
             let dropType = null
             if (action == "down") {
                 dropType = 'soft'
@@ -1196,6 +1212,19 @@ class Game {
                 this.holdTime = 1
             } else {
                 console.log("cannot hold two times")
+            }
+        } else if (this.state == "dropping" && action == 'regret') {
+            if (this.regretTime > 0) {
+                const center = Math.floor(this.config.columnSize / 2)
+                const boxWidth = this.block.boundingBoxWidth
+                const x = 1
+                const y = center - Math.ceil(boxWidth / 2)
+                this.resetDelayTimer()
+                this.position = [x, y]
+                this.rotation = 0
+                this.regretTime -= 1
+            } else {
+                console.log("cannot regret")
             }
         } else if (this.state == "restart") {
             // 初始化方块
@@ -1253,6 +1282,7 @@ class Game {
             TouchLeft: "left",
             TouchRight: "right",
             TouchDrop: "hard_drop",
+            TouchRegret: "regret",
             TouchDown: "down",
             TouchHold: "hold",
             TouchClockwise: "clockwise",
@@ -1330,16 +1360,7 @@ window.addEventListener("load", function () {
                     const yDiff = t.pageY - game.ongoingTouches[idx].pageY
                     const xDiff = t.pageX - game.ongoingTouches[idx].pageX
                     if (Math.abs(xDiff) <= radius && Math.abs(yDiff) <= radius) {
-                        const pressTime = Date.now() - game.ongoingTouchesTime[idx] 
-                        if (pressTime > 500) {
-                            game.control("TouchHold", "down")
-                            game.ongoingTouches.splice(idx)
-                            game.touchNoMove.splice(idx)
-                            game.ongoingTouchesStart.splice(idx)
-                            game.touchTrace.splice(idx)
-                            game.ongoingTouchesTime.splice(idx)
-                            continue
-                        }
+                        continue
                         /// swipe left
                     } else if (Math.abs(xDiff) > Math.abs(yDiff) && xDiff < -radius) {
                         game.control("TouchLeft", "down")
@@ -1392,8 +1413,10 @@ window.addEventListener("load", function () {
                         }
                         if (lastSpeed > 1.2 && lastVec[1] > lastVec[0] && lastVec[1] > radius) {
                             game.control("TouchDrop", 'down')
+                        } else if (lastSpeed > 1.2 && lastVec[1] < 0 && 
+                                   Math.abs(lastVec[1]) > Math.abs(lastVec[0])) {
+                            game.control("TouchRegret", 'down')
                         }
-                        
                     }
                     game.ongoingTouches.splice(idx)
                     game.touchNoMove.splice(idx)
