@@ -14,13 +14,13 @@
         body {
             background: #000000;
             /* Prevent the ugly blue highlighting from accidental selection of text */ user-select: none;
-            -webkit-touch-callout: none; /* iOS Safari */
-            -webkit-user-select: none; /* Safari */
-            -khtml-user-select: none; /* Konqueror HTML */
-            -moz-user-select: none; /* Old versions of Firefox */
-                -ms-user-select: none; /* Internet Explorer/Edge */
-                    user-select: none; /* Non-prefixed version, currently
-                                        supported by Chrome, Edge, Opera and Firefox */
+            -webkit-touch-callout: none !important;
+            -webkit-user-select: none !important;
+            -khtml-user-select: none !important; /* Konqueror HTML */
+            -moz-user-select: none !important; /* Old versions of Firefox */
+            -ms-user-select: none !important; /* Internet Explorer/Edge */
+
+            overflow: hidden;
             top: 0; bottom: 0; left: 0; right: 0;
             
         }
