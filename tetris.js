@@ -1330,7 +1330,16 @@ window.addEventListener("load", function () {
                     const yDiff = t.pageY - game.ongoingTouches[idx].pageY
                     const xDiff = t.pageX - game.ongoingTouches[idx].pageX
                     if (Math.abs(xDiff) <= radius && Math.abs(yDiff) <= radius) {
-                        continue
+                        const pressTime = Date.now() - game.ongoingTouchesTime[idx] 
+                        if (pressTime > 700) {
+                            game.control("TouchHold", "down")
+                            game.ongoingTouches.splice(idx)
+                            game.touchNoMove.splice(idx)
+                            game.ongoingTouchesStart.splice(idx)
+                            game.touchTrace.splice(idx)
+                            game.ongoingTouchesTime.splice(idx)
+                            continue
+                        }
                         /// swipe left
                     } else if (Math.abs(xDiff) > Math.abs(yDiff) && xDiff < -radius) {
                         game.control("TouchLeft", "down")
@@ -1362,13 +1371,7 @@ window.addEventListener("load", function () {
                     const yDiff = t.pageY - game.ongoingTouchesStart[idx].pageY
                     const xDiff = t.pageX - game.ongoingTouchesStart[idx].pageX
                     if (Math.abs(xDiff) <= radius && Math.abs(yDiff) <= radius && game.touchNoMove[idx]) {
-                        const pressTime = Date.now() - game.ongoingTouchesTime[idx] 
-                        console.log(pressTime)
-                        if (pressTime < 800) {
-                            game.control("TouchClockwise", "down")
-                        } else {
-                            game.control("TouchHold", "down")
-                        }
+                        game.control("TouchClockwise", "down")
                     } else {
                         let lastSpeed = 0
                         let lastVec = [0, 0]
