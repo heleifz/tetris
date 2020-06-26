@@ -918,9 +918,9 @@ class Game {
     
     getTouchControl(touch) {
         const x = touch.pageX * this.render.dpr
-        if (x < this.render.width * 0.2) {
+        if (x < this.render.width * 0.15) {
             return "TouchLeft"
-        } else if (x > this.render.width * 0.8) {
+        } else if (x > this.render.width * 0.85) {
             return "TouchRight"
         } else if (x < this.render.width * 0.5) {
             return "TouchClockwise"
@@ -1315,46 +1315,44 @@ window.addEventListener("load", function () {
         document.addEventListener('keyup', function (e) {
             game.control(e.code, 'up')
         })
-        // 触控事件
-        document.addEventListener("touchstart", function (e) {
+        function onTouchStart(e) {
             var touches = e.changedTouches;
             for (let i = 0; i < touches.length; i++) {
-                console.log("开始第 " + i + " 个触摸 ...");
-                game.ongoingTouches.push(touches[i]);
+                let t = touches[i] 
+                let control = game.getTouchControl(t)
+                if (control == "TouchLeft" || control == "TouchRight") {
+                    game.control(control, "down")
+                }
+                game.ongoingTouches.push(t);
             }
-        })
-        document.addEventListener("touchend", function (e) {
+        }
+        function onTouchEnd(e) {
             var touches = e.changedTouches;
             for (let i = 0; i < touches.length; i++) {
                 let t = touches[i] 
                 const idx = game.indexForOngoingTouch(t)
                 if (idx != null) {
-                    console.log(game.ongoingTouches[idx]) 
-                    console.log(t) 
-                    const xDiff = (t.pageX - game.ongoingTouches[idx].pageX) * game.render.dpr
-                    const yDiff = (t.pageY - game.ongoingTouches[idx].pageY) * game.render.dpr
-                    console.log(xDiff, yDiff)
-                    if (Math.abs(xDiff) < game.render.width * 0.05 &&
-                         Math.abs(yDiff) < game.render.width * 0.05) {
-                        let control = game.getTouchControl(t)
-                        console.log(control)
-                        if (control != null) {
-                            game.control(control, 'down')
-                            game.control(control, 'up')
-                        }
+                    let oldControl = game.getTouchControl(t)
+                    const yDiff = t.pageY - game.ongoingTouches[idx].pageY
+                    const xDiff = t.pageX - game.ongoingTouches[idx].pageX
+                    if (oldControl == "TouchLeft" || oldControl == "TouchRight") {
+                        game.control(oldControl, "up")
+                    } else if ((oldControl == 'TouchClockwise' || oldControl == 'TouchCounterClockwise')
+                             && Math.abs(xDiff) < 0.02 * game.render.width
+                             && Math.abs(yDiff) < 0.02 * game.render.height) {
+                        game.control(oldControl, "down")
+                        game.control(oldControl, "up")
                     } else if (yDiff > game.render.height * 0.1) {
                         game.control("TouchDrop", 'down')
                     }
                     game.ongoingTouches.splice(idx)
                 }
             }
-        })
-        document.addEventListener("touchcancel", function (e) {
-            var touches = e.changedTouches;
-            for (let i = 0; i < touches.length; i++) {
-                let t = touches[i] 
-            }
-        })
+        }
+        // 触控事件
+        document.addEventListener("touchstart", onTouchStart)
+        document.addEventListener("touchend", onTouchEnd)
+        document.addEventListener("touchcancel", onTouchEnd)
     })
     window.addEventListener("resize", function() { 
         game.initializeUI()
