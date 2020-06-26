@@ -1339,7 +1339,7 @@ window.addEventListener("load", function () {
                         game.control(oldControl, "up")
                     } else if ((oldControl == 'TouchClockwise' || oldControl == 'TouchCounterClockwise')
                              && Math.abs(xDiff) < 0.02 * game.render.width
-                             && Math.abs(yDiff) < 0.02 * game.render.height) {
+                             && Math.abs(yDiff) < 0.02 * game.render.width) {
                         game.control(oldControl, "down")
                         game.control(oldControl, "up")
                     } else if (yDiff > game.render.height * 0.1) {
