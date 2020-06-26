@@ -897,6 +897,7 @@ class Game {
         this.keyTimer = {}
 
         this.ongoingTouches = []
+        this.ongoingTouchesStart = []
 
         this.block = null
         this.nextBlocks = []
@@ -916,18 +917,6 @@ class Game {
         return this
     }
     
-    getTouchControl(touch) {
-        const x = touch.pageX * this.render.dpr
-        if (x < this.render.width * 0.15) {
-            return "TouchLeft"
-        } else if (x > this.render.width * 0.85) {
-            return "TouchRight"
-        } else if (x <= this.render.width * 0.85) {
-            return "TouchClockwise"
-        }
-    }
-
-
     indexForOngoingTouch(touch) {
         const id = touch.identifier
         for (let i = 0; i < this.ongoingTouches.length; i++) {
@@ -1274,25 +1263,29 @@ class Game {
             noPress = 0
         }
         if (type == "down") {
-            this.keyPressed[action] = 1
             this.stateMachine(action)
-            if (action == "left" || action == "right" || action == "down") {
-                if (noPress) {
-                    const that = this
-                    function pressFunc() {
-                        if (that.keyPressed[action] == 1) {
-                            that.stateMachine(action)
-                            setTimeout(pressFunc, 30)
+            if (!this.render.isTouch) {
+                this.keyPressed[action] = 1
+                if (action == "left" || action == "right" || action == "down") {
+                    if (noPress) {
+                        const that = this
+                        function pressFunc() {
+                            if (that.keyPressed[action] == 1) {
+                                that.stateMachine(action)
+                                setTimeout(pressFunc, 30)
+                            }
                         }
+                        clearTimeout(this.keyTimer[action])
+                        this.keyTimer[action] = setTimeout(pressFunc, 250)
                     }
-                    clearTimeout(this.keyTimer[action])
-                    this.keyTimer[action] = setTimeout(pressFunc, 250)
                 }
             }
         } else {
-            this.keyPressed[action] = 0
-            clearTimeout(this.keyTimer[action])
-            this.keyTimer[action] = null
+            if (!this.isTouch) {
+                this.keyPressed[action] = 0
+                clearTimeout(this.keyTimer[action])
+                this.keyTimer[action] = null
+            }
         }
     }
 
@@ -1318,6 +1311,37 @@ window.addEventListener("load", function () {
             for (let i = 0; i < touches.length; i++) {
                 let t = touches[i] 
                 game.ongoingTouches.push(t);
+                game.ongoingTouchesStart.push(t);
+            }
+        }
+        function onTouchMove(e) {
+            var touches = e.changedTouches;
+            const radius = 18
+            for (let i = 0; i < touches.length; i++) {
+                let t = touches[i]
+                console.log(t)
+                const idx = game.indexForOngoingTouch(t)
+                if (idx != null) {
+                    const yDiff = t.pageY - game.ongoingTouches[idx].pageY
+                    const xDiff = t.pageX - game.ongoingTouches[idx].pageX
+                    console.log(xDiff)
+                    console.log(yDiff)
+                    if (Math.abs(xDiff) <= radius && Math.abs(yDiff) <= radius) {
+                        continue
+                        /// swipe left
+                    } else if (Math.abs(xDiff) > Math.abs(yDiff) && xDiff < -radius) {
+                        game.control("TouchLeft", "down")
+                        game.ongoingTouches[idx] = t
+                        // swipe right
+                    } else if (Math.abs(xDiff) > Math.abs(yDiff) && xDiff > radius) {
+                        console.log("right")
+                        game.control("TouchRight", "down")
+                        game.ongoingTouches[idx] = t
+                    } else if (Math.abs(yDiff) > Math.abs(xDiff) && yDiff > radius) {
+                        game.control("TouchDown", "down")
+                        game.ongoingTouches[idx] = t
+                    }
+                }
             }
         }
         function onTouchEnd(e) {
@@ -1327,43 +1351,22 @@ window.addEventListener("load", function () {
                 let t = touches[i] 
                 const idx = game.indexForOngoingTouch(t)
                 if (idx != null) {
-                    const yDiff = t.pageY - game.ongoingTouches[idx].pageY
-                    const xDiff = t.pageX - game.ongoingTouches[idx].pageX
-                    let control = game.getTouchControl(t)
+                    const yDiff = t.pageY - game.ongoingTouchesStart[idx].pageY
+                    const xDiff = t.pageX - game.ongoingTouchesStart[idx].pageX
                     if (Math.abs(xDiff) <= radius && Math.abs(yDiff) <= radius) {
-                        if (control !== null) {
-                            game.control(control, "down")
-                            game.control(control, "up")
-                        }
-                    /// swipe left
-                    } else if (Math.abs(xDiff) > Math.abs(yDiff) && xDiff < - 7 * radius) {
-                        game.control("TouchLeft", "down")
-                        game.control("TouchLeft", "down")
-                        game.control("TouchLeft", "down")
-                        game.control("TouchLeft", "up")
-                    } else if (Math.abs(xDiff) > Math.abs(yDiff) && xDiff < -radius) {
-                        game.control("TouchLeft", "down")
-                        game.control("TouchLeft", "up")
-                    // swipe right
-                    } else if (Math.abs(xDiff) > Math.abs(yDiff) && xDiff > 7 * radius) {
-                        game.control("TouchRight", "down")
-                        game.control("TouchRight", "down")
-                        game.control("TouchRight", "down")
-                        game.control("TouchRight", "up")
-                    // swift down
-                    } else if (Math.abs(xDiff) > Math.abs(yDiff) && xDiff > radius) {
-                        game.control("TouchRight", "down")
-                        game.control("TouchRight", "up")
-                    // swipe right
-                    } else if (Math.abs(yDiff) > Math.abs(xDiff) && yDiff > radius) {
+                        game.control("TouchClockwise", "down")
+                    }
+                    if (Math.abs(yDiff) > Math.abs(xDiff) && yDiff > 3 * radius) {
                         game.control("TouchDrop", 'down')
                     }
                     game.ongoingTouches.splice(idx)
+                    game.ongoingTouchesStart.splice(idx)
                 }
             }
         }
         // 触控事件
         document.addEventListener("touchstart", onTouchStart)
+        document.addEventListener("touchmove", onTouchMove)
         document.addEventListener("touchend", onTouchEnd)
         document.addEventListener("touchcancel", onTouchEnd)
     })
