@@ -922,10 +922,8 @@ class Game {
             return "TouchLeft"
         } else if (x > this.render.width * 0.85) {
             return "TouchRight"
-        } else if (x < this.render.width * 0.5) {
+        } else if (x <= this.render.width * 0.85) {
             return "TouchClockwise"
-        } else {
-            return "TouchCounterClockwise"
         }
     }
 
@@ -1266,7 +1264,6 @@ class Game {
             TouchDown: "down",
             TouchHold: "hold",
             TouchClockwise: "clockwise",
-            TouchCounterClockwise: "counter_clockwise",
         }
         if (!(key in keyMap)) {
             return
@@ -1338,17 +1335,13 @@ window.addEventListener("load", function () {
                     const xDiff = t.pageX - game.ongoingTouches[idx].pageX
                     if (oldControl == "TouchLeft" || oldControl == "TouchRight") {
                         game.control(oldControl, "up")
-                    } else if ((oldControl == 'TouchClockwise' || oldControl == 'TouchCounterClockwise')
+                    } else if ((oldControl == 'TouchClockwise')
                              && Math.abs(xDiff) <= 0.05 * game.render.width
                              && Math.abs(yDiff) <= 0.05 * game.render.width) {
                         game.control(oldControl, "down")
                         game.control(oldControl, "up")
-                    } else if (yDiff > xDiff && yDiff > game.render.width * 0.1) {
+                    } else if (yDiff > xDiff && yDiff > game.render.width * 0.08) {
                         game.control("TouchDrop", 'down')
-                    } else if (yDiff > xDiff && yDiff > game.render.width * 0.05) {
-                        game.control("TouchDown", 'down')
-                        game.control("TouchDown", 'down')
-                        game.control("TouchDown", 'up')
                     }
                     game.ongoingTouches.splice(idx)
                 }
