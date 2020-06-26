@@ -1322,6 +1322,7 @@ window.addEventListener("load", function () {
         }
         function onTouchEnd(e) {
             var touches = e.changedTouches;
+            const radius = 10
             for (let i = 0; i < touches.length; i++) {
                 let t = touches[i] 
                 const idx = game.indexForOngoingTouch(t)
@@ -1329,24 +1330,23 @@ window.addEventListener("load", function () {
                     const yDiff = t.pageY - game.ongoingTouches[idx].pageY
                     const xDiff = t.pageX - game.ongoingTouches[idx].pageX
                     let control = game.getTouchControl(t)
-                    if (Math.abs(xDiff) <= 0.03 * game.render.width
-                        && Math.abs(yDiff) <= 0.03 * game.render.width) {
+                    if (Math.abs(xDiff) <= radius && Math.abs(yDiff) <= radius) {
                         if (control !== null) {
                             game.control(control, "down")
                             game.control(control, "up")
                         }
                     /// swipe left
-                    } else if (Math.abs(xDiff) > Math.abs(yDiff) && xDiff < -game.render.width * 0.03) {
+                    } else if (Math.abs(xDiff) > Math.abs(yDiff) && xDiff < -radius) {
                         game.control("TouchLeft", "down")
                         game.control("TouchLeft", "down")
                         game.control("TouchLeft", "up")
                     // swipe right
-                    } else if (Math.abs(xDiff) > Math.abs(yDiff) && xDiff > game.render.width * 0.03) {
+                    } else if (Math.abs(xDiff) > Math.abs(yDiff) && xDiff > radius) {
                         game.control("TouchRight", "down")
                         game.control("TouchRight", "down")
                         game.control("TouchRight", "up")
                     // swift down
-                    } else if (Math.abs(yDiff) > Math.abs(xDiff) && yDiff > game.render.width * 0.03) {
+                    } else if (Math.abs(yDiff) > Math.abs(xDiff) && yDiff > radius) {
                         game.control("TouchDrop", 'down')
                     }
                     game.ongoingTouches.splice(idx)
