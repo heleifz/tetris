@@ -1336,7 +1336,7 @@ window.addEventListener("load", function () {
                             game.control(control, "up")
                         }
                     /// swipe left
-                    } else if (Math.abs(xDiff) > Math.abs(yDiff) && xDiff < - 10 * radius) {
+                    } else if (Math.abs(xDiff) > Math.abs(yDiff) && xDiff < - 7 * radius) {
                         game.control("TouchLeft", "down")
                         game.control("TouchLeft", "down")
                         game.control("TouchLeft", "down")
@@ -1345,7 +1345,7 @@ window.addEventListener("load", function () {
                         game.control("TouchLeft", "down")
                         game.control("TouchLeft", "up")
                     // swipe right
-                    } else if (Math.abs(xDiff) > Math.abs(yDiff) && xDiff > 10 * radius) {
+                    } else if (Math.abs(xDiff) > Math.abs(yDiff) && xDiff > 7 * radius) {
                         game.control("TouchRight", "down")
                         game.control("TouchRight", "down")
                         game.control("TouchRight", "down")
