@@ -1263,6 +1263,7 @@ class Game {
             TouchLeft: "left",
             TouchRight: "right",
             TouchDrop: "hard_drop",
+            TouchDown: "down",
             TouchHold: "hold",
             TouchClockwise: "clockwise",
             TouchCounterClockwise: "counter_clockwise",
@@ -1338,12 +1339,16 @@ window.addEventListener("load", function () {
                     if (oldControl == "TouchLeft" || oldControl == "TouchRight") {
                         game.control(oldControl, "up")
                     } else if ((oldControl == 'TouchClockwise' || oldControl == 'TouchCounterClockwise')
-                             && Math.abs(xDiff) < 0.02 * game.render.width
-                             && Math.abs(yDiff) < 0.02 * game.render.width) {
+                             && Math.abs(xDiff) <= 0.05 * game.render.width
+                             && Math.abs(yDiff) <= 0.05 * game.render.width) {
                         game.control(oldControl, "down")
                         game.control(oldControl, "up")
-                    } else if (yDiff > game.render.height * 0.1) {
+                    } else if (yDiff > xDiff && yDiff > game.render.width * 0.1) {
                         game.control("TouchDrop", 'down')
+                    } else if (yDiff > xDiff && yDiff > game.render.width * 0.05) {
+                        game.control("TouchDown", 'down')
+                        game.control("TouchDown", 'down')
+                        game.control("TouchDown", 'up')
                     }
                     game.ongoingTouches.splice(idx)
                 }
