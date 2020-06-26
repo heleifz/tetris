@@ -346,6 +346,7 @@ class Renderer {
         ctx.fillRect(this.titleX, this.timeY, this.titleWidth, this.timeHeight)
 
         if (this.isTouch) {
+            let ctx = this.gamePadCanvas.getContext('2d')
             ctx.fillStyle = 'rgb(255,255,255,0.3)'
             for (let button of this.virtualButtons) {
                 ctx.beginPath();
