@@ -898,6 +898,7 @@ class Game {
 
         this.ongoingTouches = []
         this.ongoingTouchesStart = []
+        this.touchNoMove = []
 
         this.block = null
         this.nextBlocks = []
@@ -1312,6 +1313,7 @@ window.addEventListener("load", function () {
                 let t = touches[i] 
                 game.ongoingTouches.push(t);
                 game.ongoingTouchesStart.push(t);
+                game.touchNoMove.push(true);
             }
         }
         function onTouchMove(e) {
@@ -1319,27 +1321,26 @@ window.addEventListener("load", function () {
             const radius = 18
             for (let i = 0; i < touches.length; i++) {
                 let t = touches[i]
-                console.log(t)
                 const idx = game.indexForOngoingTouch(t)
                 if (idx != null) {
                     const yDiff = t.pageY - game.ongoingTouches[idx].pageY
                     const xDiff = t.pageX - game.ongoingTouches[idx].pageX
-                    console.log(xDiff)
-                    console.log(yDiff)
                     if (Math.abs(xDiff) <= radius && Math.abs(yDiff) <= radius) {
                         continue
                         /// swipe left
                     } else if (Math.abs(xDiff) > Math.abs(yDiff) && xDiff < -radius) {
                         game.control("TouchLeft", "down")
                         game.ongoingTouches[idx] = t
+                        game.touchNoMove[idx] = false
                         // swipe right
                     } else if (Math.abs(xDiff) > Math.abs(yDiff) && xDiff > radius) {
-                        console.log("right")
                         game.control("TouchRight", "down")
                         game.ongoingTouches[idx] = t
+                        game.touchNoMove[idx] = false
                     } else if (Math.abs(yDiff) > Math.abs(xDiff) && yDiff > radius) {
                         game.control("TouchDown", "down")
                         game.ongoingTouches[idx] = t
+                        game.touchNoMove[idx] = false
                     }
                 }
             }
@@ -1353,13 +1354,14 @@ window.addEventListener("load", function () {
                 if (idx != null) {
                     const yDiff = t.pageY - game.ongoingTouchesStart[idx].pageY
                     const xDiff = t.pageX - game.ongoingTouchesStart[idx].pageX
-                    if (Math.abs(xDiff) <= radius && Math.abs(yDiff) <= radius) {
+                    if (Math.abs(xDiff) <= radius && Math.abs(yDiff) <= radius && game.touchNoMove[idx]) {
                         game.control("TouchClockwise", "down")
                     }
                     if (Math.abs(yDiff) > Math.abs(xDiff) && yDiff > 3 * radius) {
                         game.control("TouchDrop", 'down')
                     }
                     game.ongoingTouches.splice(idx)
+                    game.touchNoMove.splice(idx)
                     game.ongoingTouchesStart.splice(idx)
                 }
             }
