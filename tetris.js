@@ -1340,8 +1340,7 @@ window.addEventListener("load", function () {
                              && Math.abs(yDiff) <= 0.05 * game.render.width) {
                         game.control(oldControl, "down")
                         game.control(oldControl, "up")
-                    }
-                    if (yDiff > xDiff && yDiff > game.render.width * 0.06) {
+                    } else if (yDiff > xDiff && yDiff > game.render.width * 0.06) {
                         game.control("TouchDrop", 'down')
                     }
                     game.ongoingTouches.splice(idx)
