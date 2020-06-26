@@ -1317,10 +1317,6 @@ window.addEventListener("load", function () {
             var touches = e.changedTouches;
             for (let i = 0; i < touches.length; i++) {
                 let t = touches[i] 
-                let control = game.getTouchControl(t)
-                if (control == "TouchLeft" || control == "TouchRight") {
-                    game.control(control, "down")
-                }
                 game.ongoingTouches.push(t);
             }
         }
@@ -1330,17 +1326,27 @@ window.addEventListener("load", function () {
                 let t = touches[i] 
                 const idx = game.indexForOngoingTouch(t)
                 if (idx != null) {
-                    let oldControl = game.getTouchControl(t)
                     const yDiff = t.pageY - game.ongoingTouches[idx].pageY
                     const xDiff = t.pageX - game.ongoingTouches[idx].pageX
-                    if (oldControl == "TouchLeft" || oldControl == "TouchRight") {
-                        game.control(oldControl, "up")
-                    } else if ((oldControl == 'TouchClockwise')
-                             && Math.abs(xDiff) <= 0.05 * game.render.width
-                             && Math.abs(yDiff) <= 0.05 * game.render.width) {
-                        game.control(oldControl, "down")
-                        game.control(oldControl, "up")
-                    } else if (yDiff > xDiff && yDiff > game.render.width * 0.06) {
+                    let control = game.getTouchControl(t)
+                    if (Math.abs(xDiff) <= 0.05 * game.render.width
+                        && Math.abs(yDiff) <= 0.05 * game.render.width) {
+                        if (control !== null) {
+                            game.control(control, "down")
+                            game.control(control, "up")
+                        }
+                    /// swipe left
+                    } else if (Math.abs(xDiff) > Math.abs(yDiff) && xDiff < -game.render.width * 0.05) {
+                        game.control("TouchLeft", "down")
+                        game.control("TouchLeft", "down")
+                        game.control("TouchLeft", "up")
+                    // swipe right
+                    } else if (Math.abs(xDiff) > Math.abs(yDiff) && xDiff > game.render.width * 0.05) {
+                        game.control("TouchRight", "down")
+                        game.control("TouchRight", "down")
+                        game.control("TouchRight", "up")
+                    // swift down
+                    } else if (Math.abs(yDiff) > Math.abs(xDiff) && yDiff > game.render.width * 0.05) {
                         game.control("TouchDrop", 'down')
                     }
                     game.ongoingTouches.splice(idx)
