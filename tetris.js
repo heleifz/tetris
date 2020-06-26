@@ -1381,7 +1381,7 @@ window.addEventListener("load", function () {
                                 }
                             }
                         }
-                        if (lastSpeed > 5 && lastVec[1] > lastVec[0]) {
+                        if (lastSpeed > 2 && lastVec[1] > lastVec[0]) {
                             game.control("TouchDrop", 'down')
                         }
                         
