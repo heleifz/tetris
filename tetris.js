@@ -111,19 +111,6 @@ class Renderer {
         this.config = config
     }
 
-    getTouchControl(touch) {
-        const x = touch.pageX * this.dpr
-        if (x < this.width * 0.2) {
-            return "TouchLeft"
-        } else if (x > this.width * 0.8) {
-            return "TouchRight"
-        } else if (x < this.width * 0.5) {
-            return "TouchClockwise"
-        } else {
-            return "TouchCounterClockwise"
-        }
-    }
-
     setUpCanvas(canvas) {
         let style_height = +getComputedStyle(canvas).getPropertyValue("height").slice(0, -2);
         let style_width = +getComputedStyle(canvas).getPropertyValue("width").slice(0, -2);
@@ -908,6 +895,9 @@ class Game {
         this.afterPause = null
         this.keyPressed = {}
         this.keyTimer = {}
+
+        this.ongoingTouches = []
+
         this.block = null
         this.nextBlocks = []
         this.hold = null
@@ -924,6 +914,30 @@ class Game {
         this.render.recalculate() 
         this.render.drawUI()
         return this
+    }
+    
+    getTouchControl(touch) {
+        const x = touch.pageX * this.render.dpr
+        if (x < this.render.width * 0.2) {
+            return "TouchLeft"
+        } else if (x > this.render.width * 0.8) {
+            return "TouchRight"
+        } else if (x < this.render.width * 0.5) {
+            return "TouchClockwise"
+        } else {
+            return "TouchCounterClockwise"
+        }
+    }
+
+
+    indexForOngoingTouch(touch) {
+        const id = touch.identifier
+        for (let i = 0; i < this.ongoingTouches.length; i++) {
+            if (this.ongoingTouches[i].identifier == id) {
+                return i
+            }
+        }
+        return null
     }
 
     createEmptyStack(showLines) {
@@ -1301,23 +1315,37 @@ window.addEventListener("load", function () {
         document.addEventListener('keyup', function (e) {
             game.control(e.code, 'up')
         })
+        // 触控事件
         document.addEventListener("touchstart", function (e) {
             var touches = e.changedTouches;
             for (let i = 0; i < touches.length; i++) {
-                let t = touches[i] 
-                let control = game.render.getTouchControl(t)
-                if (control != null) {
-                    game.control(control, 'down')
-                }
+                console.log("开始第 " + i + " 个触摸 ...");
+                game.ongoingTouches.push(touches[i]);
             }
         })
         document.addEventListener("touchend", function (e) {
             var touches = e.changedTouches;
             for (let i = 0; i < touches.length; i++) {
                 let t = touches[i] 
-                let control = game.render.getTouchControl(t)
-                if (control != null) {
-                    game.control(control, 'up')
+                const idx = game.indexForOngoingTouch(t)
+                if (idx != null) {
+                    console.log(game.ongoingTouches[idx]) 
+                    console.log(t) 
+                    const xDiff = (t.pageX - game.ongoingTouches[idx].pageX) * game.render.dpr
+                    const yDiff = (t.pageY - game.ongoingTouches[idx].pageY) * game.render.dpr
+                    console.log(xDiff, yDiff)
+                    if (Math.abs(xDiff) < game.render.width * 0.05 &&
+                         Math.abs(yDiff) < game.render.width * 0.05) {
+                        let control = game.getTouchControl(t)
+                        console.log(control)
+                        if (control != null) {
+                            game.control(control, 'down')
+                            game.control(control, 'up')
+                        }
+                    } else if (yDiff > game.render.height * 0.1) {
+                        game.control("TouchDrop", 'down')
+                    }
+                    game.ongoingTouches.splice(idx)
                 }
             }
         })
@@ -1325,10 +1353,6 @@ window.addEventListener("load", function () {
             var touches = e.changedTouches;
             for (let i = 0; i < touches.length; i++) {
                 let t = touches[i] 
-                let control = game.render.getTouchControl(t)
-                if (control != null) {
-                    game.control(control, 'up')
-                }
             }
         })
     })
