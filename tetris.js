@@ -102,24 +102,6 @@ function randomColorBlockParticle() {
 
 class Renderer {
 
-    setUpCanvas(canvas) {
-        let style_height = +getComputedStyle(canvas).getPropertyValue("height").slice(0, -2);
-        let style_width = +getComputedStyle(canvas).getPropertyValue("width").slice(0, -2);
-        canvas.height = style_height * this.dpr
-        canvas.width = style_width * this.dpr
-    }
-    
-    buttonTouchDistance(x, y, radius, touch) {
-        let touchX = touch.pageX * this.dpr
-        let touchY = touch.pageY * this.dpr
-        let dist = Math.sqrt(((x - touchX) ** 2) + ((y - touchY) ** 2))
-        if (dist <= radius) {
-            return dist
-        } else {
-            return null
-        }
-    }
-
     constructor(animationCanvas, uiCanvas, canvas, gamePadCanvas, config) {
         this.dpr = window.devicePixelRatio || 1
         this.animationCanvas = animationCanvas
@@ -128,6 +110,27 @@ class Renderer {
         this.gamePadCanvas = gamePadCanvas
         this.config = config
     }
+
+    getTouchControl(touch) {
+        const x = touch.pageX * this.dpr
+        if (x < this.width * 0.2) {
+            return "TouchLeft"
+        } else if (x > this.width * 0.8) {
+            return "TouchRight"
+        } else if (x < this.width * 0.5) {
+            return "TouchClockwise"
+        } else {
+            return "TouchCounterClockwise"
+        }
+    }
+
+    setUpCanvas(canvas) {
+        let style_height = +getComputedStyle(canvas).getPropertyValue("height").slice(0, -2);
+        let style_width = +getComputedStyle(canvas).getPropertyValue("width").slice(0, -2);
+        canvas.height = style_height * this.dpr
+        canvas.width = style_width * this.dpr
+    }
+    
 
     recalculate() {
 
@@ -153,14 +156,6 @@ class Renderer {
         } else {
             this.gameY = Math.round((this.windowHeight - this.height) / 2)
         }
-        // this.canvas.width = this.width
-        // this.canvas.height = window.innerHeight
-        // this.uiCanvas.width = this.width
-        // this.uiCanvas.height = window.innerHeight
-        // this.animationCanvas.width = this.width
-        // this.animationCanvas.height = window.innerHeight
-        // this.gamePadCanvas.width = this.width
-        // this.gamePadCanvas.height = window.innerHeight
         this.setUpCanvas(this.canvas)
         this.setUpCanvas(this.uiCanvas)
         this.setUpCanvas(this.animationCanvas)
@@ -190,40 +185,6 @@ class Renderer {
         this.holdY = this.timeY + this.scoreHeight + this.titleHeight
         this.holdHeight = Math.round(previewHeight * 1.2)
         
-        const dropButtonX = this.width * 0.15
-        const dropButtonY = this.windowHeight * 0.9
-        const dropButtonRadius = 100
-        const holdButtonX = this.width * 0.35
-        const holdButtonY = this.windowHeight * 0.9
-        
-        const buttonRadius = 80
-        const upButtonX = this.width * 0.83
-        const upButtonY = this.windowHeight * 0.84
-        const leftButtonX = this.width * 0.83 - 1.1 * buttonRadius
-        const leftButtonY = this.windowHeight * 0.91
-        const rightButtonX = this.width * 0.83 + 1.1 * buttonRadius
-        const rightButtonY = this.windowHeight * 0.91
-
-        this.virtualButtons = [
-            [upButtonX, upButtonY, buttonRadius, 'TouchUp'],
-            [leftButtonX, leftButtonY, buttonRadius, 'TouchLeft'],
-            [rightButtonX, rightButtonY, buttonRadius, 'TouchRight'],
-            [dropButtonX, dropButtonY, dropButtonRadius, 'TouchDrop'],
-            [holdButtonX, holdButtonY, buttonRadius, 'TouchHold'],
-        ]
-    }
-
-    nearestTouchedButton(touch) {
-        let minDist = null
-        let button = null
-        for (let b of this.virtualButtons) {
-            let d = this.buttonTouchDistance(b[0], b[1], b[2], touch)
-            if (d !== null && (minDist == null || d < minDist)) {
-                minDist = d
-                button = b
-            }
-        }
-        return button
     }
 
     async loadResource() {
@@ -345,16 +306,6 @@ class Renderer {
         ctx.fillText("time", this.titleX, this.timeY);
         ctx.fillStyle = 'rgb(0,0,0,0.6)'
         ctx.fillRect(this.titleX, this.timeY, this.titleWidth, this.timeHeight)
-
-        if (this.isTouch) {
-            let ctx = this.gamePadCanvas.getContext('2d')
-            ctx.fillStyle = 'rgb(255,255,255,0.3)'
-            for (let button of this.virtualButtons) {
-                ctx.beginPath();
-                ctx.arc(button[0], button[1], button[2], 0, 2 * Math.PI, false);
-                ctx.fill();
-            }
-        }
 
         return this;
     }
@@ -1299,7 +1250,8 @@ class Game {
             TouchRight: "right",
             TouchDrop: "hard_drop",
             TouchHold: "hold",
-            TouchUp: "clockwise",
+            TouchClockwise: "clockwise",
+            TouchCounterClockwise: "counter_clockwise",
         }
         if (!(key in keyMap)) {
             return
@@ -1337,6 +1289,7 @@ class Game {
     }
 }
 
+
 const game = new Game(animationCanvas, uiCanvas, canvas, gamePadCanvas, globalConfig)
 window.addEventListener("load", function () {
     // 初始化 UI
@@ -1349,35 +1302,32 @@ window.addEventListener("load", function () {
             game.control(e.code, 'up')
         })
         document.addEventListener("touchstart", function (e) {
-            var ctx = gamePadCanvas.getContext("2d");
             var touches = e.changedTouches;
             for (let i = 0; i < touches.length; i++) {
                 let t = touches[i] 
-                let button = game.render.nearestTouchedButton(t)
-                if (button != null) {
-                    game.control(button[3], 'down')
+                let control = game.render.getTouchControl(t)
+                if (control != null) {
+                    game.control(control, 'down')
                 }
             }
         })
         document.addEventListener("touchend", function (e) {
-            var ctx = gamePadCanvas.getContext("2d");
             var touches = e.changedTouches;
             for (let i = 0; i < touches.length; i++) {
                 let t = touches[i] 
-                let button = game.render.nearestTouchedButton(t)
-                if (button != null) {
-                    game.control(button[3], 'up')
+                let control = game.render.getTouchControl(t)
+                if (control != null) {
+                    game.control(control, 'up')
                 }
             }
         })
         document.addEventListener("touchcancel", function (e) {
-            var ctx = gamePadCanvas.getContext("2d");
             var touches = e.changedTouches;
             for (let i = 0; i < touches.length; i++) {
                 let t = touches[i] 
-                let button = game.render.nearestTouchedButton(t)
-                if (button != null) {
-                    game.control(button[3], 'up')
+                let control = game.render.getTouchControl(t)
+                if (control != null) {
+                    game.control(control, 'up')
                 }
             }
         })
