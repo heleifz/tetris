@@ -1331,7 +1331,7 @@ window.addEventListener("load", function () {
                     const xDiff = t.pageX - game.ongoingTouches[idx].pageX
                     if (Math.abs(xDiff) <= radius && Math.abs(yDiff) <= radius) {
                         const pressTime = Date.now() - game.ongoingTouchesTime[idx] 
-                        if (pressTime > 700) {
+                        if (pressTime > 500) {
                             game.control("TouchHold", "down")
                             game.ongoingTouches.splice(idx)
                             game.touchNoMove.splice(idx)
