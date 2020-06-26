@@ -1413,7 +1413,7 @@ window.addEventListener("load", function () {
                         }
                         if (lastSpeed > 1.2 && lastVec[1] > lastVec[0] && lastVec[1] > radius) {
                             game.control("TouchDrop", 'down')
-                        } else if (lastSpeed > 1.2 && lastVec[1] < 0 && 
+                        } else if (lastSpeed > 1.2 && lastVec[1] < -radius && 
                                    Math.abs(lastVec[1]) > Math.abs(lastVec[0])) {
                             game.control("TouchRegret", 'down')
                         }
