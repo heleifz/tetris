@@ -899,6 +899,8 @@ class Game {
         this.ongoingTouches = []
         this.ongoingTouchesStart = []
         this.touchNoMove = []
+        this.touchTrace = []
+        this.ongoingTouchesTime = []
 
         this.block = null
         this.nextBlocks = []
@@ -1311,9 +1313,11 @@ window.addEventListener("load", function () {
             var touches = e.changedTouches;
             for (let i = 0; i < touches.length; i++) {
                 let t = touches[i] 
-                game.ongoingTouches.push(t);
-                game.ongoingTouchesStart.push(t);
-                game.touchNoMove.push(true);
+                game.ongoingTouches.push(t)
+                game.ongoingTouchesStart.push(t)
+                game.touchNoMove.push(true)
+                game.touchTrace.push([])
+                game.ongoingTouchesTime.push(Date.now())
             }
         }
         function onTouchMove(e) {
@@ -1342,6 +1346,9 @@ window.addEventListener("load", function () {
                         game.ongoingTouches[idx] = t
                         game.touchNoMove[idx] = false
                     }
+                    const now = Date.now()
+                    game.touchTrace[idx].push([now - game.ongoingTouchesTime[idx], [xDiff, yDiff]])
+                    game.ongoingTouchesTime[idx] = now
                 }
             }
         }
@@ -1356,13 +1363,34 @@ window.addEventListener("load", function () {
                     const xDiff = t.pageX - game.ongoingTouchesStart[idx].pageX
                     if (Math.abs(xDiff) <= radius && Math.abs(yDiff) <= radius && game.touchNoMove[idx]) {
                         game.control("TouchClockwise", "down")
-                    }
-                    if (Math.abs(yDiff) > Math.abs(xDiff) && yDiff > 3 * radius) {
-                        game.control("TouchDrop", 'down')
+                    } else {
+                        let lastSpeed = 0
+                        let lastVec = [0, 0]
+                        let distAccu = [0, 0]
+                        let timeAccu = 0
+                        for (let i = game.touchTrace[idx].length - 1; i >= 0; i--) {
+                            distAccu[0] += game.touchTrace[idx][i][1][0]
+                            distAccu[1] += game.touchTrace[idx][i][1][1]
+                            timeAccu += game.touchTrace[idx][i][0]
+                            if (timeAccu > 0) {
+                                let s = Math.sqrt((distAccu[0] ** 2 + distAccu[1] ** 2)) / timeAccu
+                                if (s > lastSpeed) {
+                                    lastSpeed = s
+                                    lastVec[0] = distAccu[0]
+                                    lastVec[1] = distAccu[1]
+                                }
+                            }
+                        }
+                        if (lastSpeed > 5 && lastVec[1] > lastVec[0]) {
+                            game.control("TouchDrop", 'down')
+                        }
+                        
                     }
                     game.ongoingTouches.splice(idx)
                     game.touchNoMove.splice(idx)
                     game.ongoingTouchesStart.splice(idx)
+                    game.touchTrace.splice(idx)
+                    game.ongoingTouchesTime.splice(idx)
                 }
             }
         }
