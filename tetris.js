@@ -1362,7 +1362,13 @@ window.addEventListener("load", function () {
                     const yDiff = t.pageY - game.ongoingTouchesStart[idx].pageY
                     const xDiff = t.pageX - game.ongoingTouchesStart[idx].pageX
                     if (Math.abs(xDiff) <= radius && Math.abs(yDiff) <= radius && game.touchNoMove[idx]) {
-                        game.control("TouchClockwise", "down")
+                        const pressTime = Date.now() - game.ongoingTouchesTime[idx] 
+                        console.log(pressTime)
+                        if (pressTime < 800) {
+                            game.control("TouchClockwise", "down")
+                        } else {
+                            game.control("TouchHold", "down")
+                        }
                     } else {
                         let lastSpeed = 0
                         let lastVec = [0, 0]
