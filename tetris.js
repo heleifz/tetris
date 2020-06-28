@@ -915,7 +915,7 @@ class Game {
         this.keyTimer = {}
 
         this.clearTouch()
-
+        this.lastAction = null
         this.block = null
         this.nextBlocks = []
         this.hold = null
@@ -1124,11 +1124,9 @@ class Game {
         clearTimeout(this.lockDelayTimer)
         const that = this
         this.lockDelayTimer = setTimeout(function () {
-            console.log("xxxx")
             if (that.block != null && 
                 that.block.collide(that.stack, that.position[0] + 1, that.position[1], that.rotation)) {
                 that.lockBlock()
-                console.log("yyyyy")
             }
         }, this.config.lockDelay)
     }
@@ -1289,9 +1287,8 @@ class Game {
             this.resetFallTimer()
             this.position = [x, y]
             this.rotation = 0
+            this.lastAction = null
             if (this.block.collide(this.stack, this.position[0], this.position[1], this.rotation)) {
-                console.log("over")
-                console.log(this.stack)
                 this.state = "over"
                 this.block = null
                 this.stateMachine("over")
@@ -1474,7 +1471,7 @@ window.addEventListener("load", function () {
                                 }
                             }
                         }
-                        if (lastSpeed > 1.2 && lastVec[1] > lastVec[0] && lastVec[1] > radius) {
+                        if (lastSpeed > 1.2 && Math.abs(lastVec[1]) > Math.abs(lastVec[0]) && lastVec[1] > 1.3 * radius) {
                             game.control("TouchDrop", 'down')
                         } else if (lastSpeed > 1.2 && lastVec[1] < -2 * radius && 
                                    Math.abs(lastVec[1]) > Math.abs(lastVec[0])) {
