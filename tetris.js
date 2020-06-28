@@ -272,6 +272,9 @@ class Renderer {
         ctx.fillText("hold", this.titleX, this.holdY);
         ctx.fillStyle = 'rgb(0,0,0,0.6)'
         ctx.fillRect(this.titleX, this.holdY, this.titleWidth, this.holdHeight)
+        // level
+        ctx.fillStyle = 'rgb(0,0,0,0.85)'
+        ctx.fillRect(this.titleX, this.holdY + this.holdHeight, this.titleWidth, this.titleHeight)
         // 计分
         ctx.fillStyle = 'rgb(0,0,0,0.85)'
         ctx.fillRect(this.titleX, this.scoreY - this.titleHeight, this.titleWidth, this.titleHeight)
@@ -308,7 +311,7 @@ class Renderer {
         return this;
     }
 
-    drawStats(hold, nextBlocks, score, lines, time, regret) {
+    drawStats(hold, nextBlocks, score, lines, time, regret, level) {
         const ctx = this.canvas.getContext('2d')
         // 分数字体大小自适应
         let scoreSize = this.titleHeight - 3
@@ -326,6 +329,10 @@ class Renderer {
         ctx.fillText(lines, this.titleX + 2, this.clearLineY + this.titleHeight)
         ctx.fillText(time, this.titleX + 2, this.timeY + this.titleHeight)
         ctx.fillText(regret, this.titleX + 2, this.regretY + this.titleHeight)
+        
+        ctx.font = (this.titleHeight + 1) + "px pixeboy";
+        ctx.fillText("LEVEL " + level, this.titleX, this.holdY + this.holdHeight + this.titleHeight)
+
         this.drawHold(hold)
         this.drawNextBlock(nextBlocks)
     }
@@ -919,6 +926,7 @@ class Game {
         this.holdTime = 0
         this.stack = null
         this.score = 0
+        this.levelLineClear = 0
         this.regretTime = 0
         this.comboCount = 0
         this.clearCount = 0
@@ -979,8 +987,12 @@ class Game {
         this.animations = newAnimation
     }
 
-    resetFallTimer() {
+    stopFallTimer() {
         clearTimeout(this.fallTimerId)
+    }
+
+    resetFallTimer() {
+        this.stopFallTimer()
         this.levelTime = rowSpeedForLevel(this.level)
         const that = this;
         this.fallTimerId = setTimeout(function () {
@@ -989,17 +1001,26 @@ class Game {
         }, this.levelTime);
     }
 
+    newDrop() {
+        this.state = "restart"
+        this.block = null
+        const that = this
+        setTimeout(function () {
+            that.stateMachine("fall")
+        }, 150)
+    }
+
     lockBlock() {
         if (this.block == null) {
             return
         }
-        this.resetFallTimer()
+        this.stopFallTimer()
         // 高亮锁定块
         let positions = this.block.positions(this.position[0], this.position[1], this.rotation)
         this.animations.push(highlightAnimation(positions))
         // 看是否能消除
         const clearResult = this.clearLines()
-        const updatedScore = this.getClearLineScore(clearResult[0].length)
+        const updatedScore = this.getClearLineScore(clearResult[0].length, clearResult[2])
         if (clearResult[0].length > 0) {
             this.state = "pause_game"
             this.animations.push(clearLineAnimation(clearResult[0]))
@@ -1007,16 +1028,21 @@ class Game {
                 this.comboCount = updatedScore[0]
                 this.score = updatedScore[1]
                 this.clearCount = updatedScore[2]
+                this.levelClearCount += clearResult[0].length
                 this.regretTime += updatedScore[3]
-                this.state = "restart"
-                this.block = null
                 this.stack = clearResult[1]
+                if (this.levelClearCount >= 10) {
+                    this.level += 1
+                    this.levelClearCount -= 10
+                }
+                this.newDrop()
             }
         } else {
-            this.state = "restart"
+            this.comboCount = 0
             for (let i = 0; i < positions.length; ++i) {
                 this.stack[positions[i][0]][positions[i][1]] = this.block.style
             }
+            this.newDrop()
         }
     }
 
@@ -1028,6 +1054,7 @@ class Game {
         for (let i = 0; i < positions.length; ++i) {
             this.stack[positions[i][0]][positions[i][1]] = this.block.style
         }
+        let perfect = true
         for (let i = this.stack.length - 1; i >= 0; i--) {
             let good = false
             for (let j = 0; j < this.config.columnSize; ++j) {
@@ -1038,7 +1065,10 @@ class Game {
             }
             if (good) {
                 for (let j = 0; j < this.config.columnSize; ++j) {
-                    newStack[realLine][j] = this.stack[i][j]
+                    if (this.stack[i][j] != null) {
+                        newStack[realLine][j] = this.stack[i][j]
+                        perfect = false
+                    }
                 }
                 realLine -= 1
             } else {
@@ -1050,7 +1080,7 @@ class Game {
                 this.stack[positions[i][0]][positions[i][1]] = null
             }
         }
-        return [cleared, newStack]
+        return [cleared, newStack, perfect]
     }
       
     drawAllElements() {
@@ -1088,14 +1118,20 @@ class Game {
         } else if (this.endTime != null) {
             useTime = this.endTime - this.beginTime
         }
-        this.render.drawStats(this.hold, this.nextBlocks, this.score, this.clearCount, msToTime(useTime), this.regretTime)
+        this.render.drawStats(this.hold, this.nextBlocks, this.score, this.clearCount, 
+                              msToTime(useTime), this.regretTime, this.level)
     }
 
     resetDelayTimer() {
         clearTimeout(this.lockDelayTimer)
         const that = this
         this.lockDelayTimer = setTimeout(function () {
-            that.lockBlock()
+            console.log("xxxx")
+            if (that.block != null && 
+                that.block.collide(that.stack, that.position[0] + 1, that.position[1], that.rotation)) {
+                that.lockBlock()
+                console.log("yyyyy")
+            }
         }, this.config.lockDelay)
     }
 
@@ -1109,26 +1145,40 @@ class Game {
         return this.randomBlocks.shift()
     }
 
-    getClearLineScore(clearLineCount) {
+    getClearLineScore(clearLineCount, isPerfect) {
         let newCombo = 0
         let newScore = this.score
         let newClearCount = this.clearCount + clearLineCount
         let newRegret = 0
         if (clearLineCount > 0) {
-            newCombo += this.comboCount + 1
+            newCombo = this.comboCount + 1
             if (clearLineCount == 1) {
                 newScore += 100 * this.level
+                if (isPerfect) {
+                    newScore += 800 * this.level
+                }
             } else if (clearLineCount == 2) {
                 newScore += 300 * this.level
+                if (isPerfect) {
+                    newScore += 1000 * this.level
+                }
             } else if (clearLineCount == 3) {
                 newScore += 500 * this.level
+                if (isPerfect) {
+                    newScore += 1800 * this.level
+                }
             } else if (clearLineCount == 4) {
                 newScore += 800 * this.level
                 newRegret = 1
+                if (isPerfect) {
+                    newScore += 2000 * this.level
+                }
             }
             if (newCombo > 1) {
                 newScore += this.level * (newCombo - 1) * 50
             }
+        } else {
+            newCombo = 0
         }
         return [newCombo, newScore, newClearCount, newRegret]
     }
@@ -1155,7 +1205,7 @@ class Game {
             this.regretTime = 1
             const center = Math.floor(this.config.columnSize / 2)
             const boxWidth = this.block.boundingBoxWidth
-            const x = 0
+            const x = 1
             const y = center - Math.ceil(boxWidth / 2)
             this.resetDelayTimer()
             this.position = [x, y]
@@ -1163,6 +1213,7 @@ class Game {
             this.state = "dropping"
             this.score = 0
             this.comboCount = 0
+            this.levelClearCount = 0
             this.clearCount = 0
             this.beginTime = Date.now()
             this.endTime = null
@@ -1236,9 +1287,12 @@ class Game {
             const x = 1
             const y = center - Math.ceil(boxWidth / 2)
             this.resetDelayTimer()
+            this.resetFallTimer()
             this.position = [x, y]
             this.rotation = 0
             if (this.block.collide(this.stack, this.position[0], this.position[1], this.rotation)) {
+                console.log("over")
+                console.log(this.stack)
                 this.state = "over"
                 this.block = null
                 this.stateMachine("over")
@@ -1256,9 +1310,11 @@ class Game {
                 for (let i = 0; i < this.stack.length; ++i) {
                     allLines.push(i)
                 }
+                this.state = "pause_game"
                 this.animations.push(gameOverAnimation())
                 this.animations.push(clearLineAnimation(allLines))
                 this.afterPause = function() {
+                    this.state = "over"
                     this.stack = this.createEmptyStack()
                 }
             } else if (action != "fall") {
@@ -1332,7 +1388,7 @@ const game = new Game(animationCanvas, uiCanvas, canvas, gamePadCanvas, globalCo
 window.addEventListener("load", function () {
     // 初始化 UI
     game.initializeUI().loadResource().then(function () {
-        game.run(5)
+        game.run(1)
         document.addEventListener('keydown', function (e) {
             game.control(e.code, 'down')
         })
