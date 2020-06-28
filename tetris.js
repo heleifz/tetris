@@ -914,11 +914,7 @@ class Game {
         this.keyPressed = {}
         this.keyTimer = {}
 
-        this.ongoingTouches = []
-        this.ongoingTouchesStart = []
-        this.touchNoMove = []
-        this.touchTrace = []
-        this.ongoingTouchesTime = []
+        this.clearTouch()
 
         this.block = null
         this.nextBlocks = []
@@ -1014,6 +1010,7 @@ class Game {
         if (this.block == null) {
             return
         }
+        this.clearTouch()
         this.stopFallTimer()
         // 高亮锁定块
         let positions = this.block.positions(this.position[0], this.position[1], this.rotation)
@@ -1325,6 +1322,14 @@ class Game {
         } else if (this.state == "pause_game") {
             return
         }
+    }
+
+    clearTouch() {
+        this.ongoingTouches = []
+        this.touchNoMove = []
+        this.ongoingTouchesStart = []
+        this.touchTrace = []
+        this.ongoingTouchesTime = []
     }
 
     control(key, type) {
