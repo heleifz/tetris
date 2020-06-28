@@ -960,6 +960,7 @@ class Game {
 
     run(level) {
         this.level = level
+        this.beginLevel = level
         this.resetFallTimer()
         const that = this;
         function redraw() {
@@ -1190,6 +1191,7 @@ class Game {
 
     stateMachine(action) {
         if (this.state == "begin") {
+            this.level = this.beginLevel
             this.afterPause = null
             this.animations = []
             this.randomBlocks = []
@@ -1413,7 +1415,7 @@ window.addEventListener("load", function () {
         }
         function onTouchMove(e) {
             var touches = e.changedTouches;
-            const radius = 18
+            const radius = 25
             for (let i = 0; i < touches.length; i++) {
                 let t = touches[i]
                 const idx = game.indexForOngoingTouch(t)
