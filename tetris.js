@@ -1007,18 +1007,52 @@ class Game {
         }, 150)
     }
 
+    TSpinType() {
+        if (this.block != TBlock) {
+            return null
+        }
+        if (this.lastAction != "clockwise" && this.lastAction != "counter_clockwise") {
+            return null
+        }
+        let corners = [
+            this.position,
+            [this.position[0] + 2, this.position[1]],
+            [this.position[0], this.position[1] + 2],
+            [this.position[0] + 2, this.position[1] + 2],
+        ]
+        let occupyCount = 0
+        for (let c of corners) {
+            // wall kick 不算
+            if (c[0] < 0 || c[0] >= this.stack.length) {
+                continue
+            }
+            if (c[1] < 0 || c[1] >= this.config.columnSize) {
+                continue
+            }
+            if (this.stack[c[0]][c[1]] != null) {
+                occupyCount += 1
+            } 
+        }
+        if (occupyCount >= 3) {
+            return 1
+        }
+        return null
+    }
+
     lockBlock() {
         if (this.block == null) {
             return
         }
         this.clearTouch()
         this.stopFallTimer()
+        
         // 高亮锁定块
         let positions = this.block.positions(this.position[0], this.position[1], this.rotation)
         this.animations.push(highlightAnimation(positions))
         // 看是否能消除
         const clearResult = this.clearLines()
-        const updatedScore = this.getClearLineScore(clearResult[0].length, clearResult[2])
+        const tspin = this.TSpinType()
+        const updatedScore = this.getClearLineScore(clearResult[0].length, clearResult[2], tspin)
         if (clearResult[0].length > 0) {
             this.state = "pause_game"
             this.animations.push(clearLineAnimation(clearResult[0]))
@@ -1036,7 +1070,8 @@ class Game {
                 this.newDrop()
             }
         } else {
-            this.comboCount = 0
+            this.comboCount = updatedScore[0]
+            this.score = updatedScore[1]
             for (let i = 0; i < positions.length; ++i) {
                 this.stack[positions[i][0]][positions[i][1]] = this.block.style
             }
@@ -1141,25 +1176,37 @@ class Game {
         return this.randomBlocks.shift()
     }
 
-    getClearLineScore(clearLineCount, isPerfect) {
+    getClearLineScore(clearLineCount, isPerfect, tspin) {
         let newCombo = 0
         let newScore = this.score
         let newClearCount = this.clearCount + clearLineCount
         let newRegret = 0
-        if (clearLineCount > 0) {
+        if (clearLineCount > 0 || tspin != null) {
             newCombo = this.comboCount + 1
             if (clearLineCount == 1) {
-                newScore += 100 * this.level
+                if (tspin != null) {
+                    newScore += 800 * this.level
+                } else {
+                    newScore += 100 * this.level
+                }
                 if (isPerfect) {
                     newScore += 800 * this.level
                 }
             } else if (clearLineCount == 2) {
-                newScore += 300 * this.level
+                if (tspin != null) {
+                    newScore += 1200 * this.level
+                } else {
+                    newScore += 300 * this.level
+                }
                 if (isPerfect) {
                     newScore += 1000 * this.level
                 }
             } else if (clearLineCount == 3) {
-                newScore += 500 * this.level
+                if (tspin != null) {
+                    newScore += 1600 * this.level
+                } else {
+                    newScore += 500 * this.level
+                }
                 if (isPerfect) {
                     newScore += 1800 * this.level
                 }
@@ -1169,7 +1216,11 @@ class Game {
                 if (isPerfect) {
                     newScore += 2000 * this.level
                 }
+            } else {
+                // t-spin
+                newScore += 400 * this.level
             }
+
             if (newCombo > 1) {
                 newScore += this.level * (newCombo - 1) * 50
             }
@@ -1228,10 +1279,10 @@ class Game {
             const nextMove = this.block.move(this.stack, this.position[0], this.position[1], this.rotation, action)
             if (nextMove[0] != this.position[0] || nextMove[1] != this.position[1] || nextMove[2] != this.rotation) {
                 this.resetDelayTimer()
+                this.lastAction = action
             }
             const dropCell = nextMove[0] - this.position[0]
             this.updateDropScore(dropCell, dropType)
-
             this.position = [nextMove[0], nextMove[1]]
             this.rotation = nextMove[2]
             if (action == "hard_drop") {
