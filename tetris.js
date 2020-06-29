@@ -725,6 +725,40 @@ let SBlock = new BlockType([
 
 ], "other", 'green')
 
+function drawRankList(ctx, x, y, width, height, totalProgress, progress, game) {
+    const rankList = game.getScoreRank()
+    const fontSize = Math.round(height * 0.08)
+    ctx.font = fontSize + "px pixeboy";
+    const middle = Math.round(x + (width / 2))
+    let inRank = false
+    const rankSize = Math.min(10, rankList.length)
+    const startY = y * 1.23
+    for (let i = 0; i < rankSize; ++i) {
+        let item = rankList[i]
+        if (rankList[i].score == game.score) {
+            inRank = true
+            ctx.fillStyle = "rgba(200,0,0," + ((progress)/totalProgress) + ")";
+        } else {
+            ctx.fillStyle = "rgba(255,255,255," + ((progress)/totalProgress) + ")";
+        }
+        ctx.textAlign = "right";
+        ctx.fillText(item.score, middle - height * 0.3, startY + fontSize * i);
+        ctx.textAlign = "left";
+        ctx.fillText(item.clearLine, middle - height * 0.2, startY + fontSize * i);
+        ctx.textAlign = "left";
+        ctx.fillText(item.playedAt, middle,  startY + fontSize * i);
+    }
+    if (!inRank) {
+        ctx.fillStyle = "rgba(200,0,0," + ((progress)/totalProgress) + ")";
+        ctx.textAlign = "right";
+        ctx.fillText(game.score, middle - height * 0.3,  startY + fontSize * rankSize);
+        ctx.textAlign = "left";
+        ctx.fillText(game.clearCount, middle - height * 0.2,  startY + fontSize * rankSize);
+        ctx.textAlign = "left";
+        ctx.fillText(formatDate(new Date()), middle, startY + fontSize * rankSize);
+    }
+}
+
 const gameOverAnimation = function () {
     let progress = 1
     return function (game) {
@@ -733,21 +767,21 @@ const gameOverAnimation = function () {
         const width = game.render.width
         const bannerHeight = game.render.height * 0.4 * (progress / 40.0)
         const trans = 0.8 * (progress / 40.0)
-        const fontSize = Math.round(bannerHeight * 0.2)
+        const fontSize = Math.round(bannerHeight * 0.15)
         const bannerY = (height - bannerHeight) / 2 * 0.8
 
         ctx.fillStyle = "rgba(50,50,50," + trans + ")";
         ctx.fillRect(0, bannerY, width, bannerHeight)
 
         if (progress > 20) {
-            ctx.font = fontSize + "px pixeboy";
+            ctx.font = fontSize + "px ka1";
             ctx.fillStyle = "rgba(251,226,81," + ((progress - 20)/20) + ")";
-            const textMetric = ctx.measureText("GAME  OVER");
-            ctx.fillText("GAME  OVER", (width - textMetric.width) / 2,  bannerY);
+            ctx.textAlign = "center";
+            ctx.fillText("GAME  OVER", width / 2,  bannerY * 1.05);
         }
         // 显示游戏排行榜
-        if (progress > 20) {
-            // console.log(game.getScoreRank())
+        if (progress > 10) {
+            drawRankList(ctx, 0, bannerY, width, bannerHeight, 30, progress - 10, game)
         }
         if (progress == 40) {
             return 1
@@ -960,9 +994,10 @@ class Game {
             playedAt: playedAt
         })
         // 按 score 排序取前 10
-        rank.sort((a,b) => (a.score > b.score) ? -1 : ((b.score > a.score) ? 1 : 0))
-        if (rank.length > 20) {
-            rank = rank.slice(0, 20)
+        rank.sort((a,b) => (a.score > b.score || (a.score == b.score && a.playedAt > b.playedAt)) ? -1 : 
+                            ((b.score > a.score || (a.score == b.score && b.playedAt > a.playedAt)) ? 1 : 0))
+        if (rank.length > 10) {
+            rank = rank.slice(0, 10)
         }
         this.storage.setItem("score_rank", JSON.stringify(rank))
     }
