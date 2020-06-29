@@ -1536,7 +1536,7 @@ window.addEventListener("load", function () {
         }
         function onTouchMove(e) {
             var touches = e.changedTouches;
-            const radius = 25
+            const radius = 22
             for (let i = 0; i < touches.length; i++) {
                 let t = touches[i]
                 const idx = game.indexForOngoingTouch(t)
