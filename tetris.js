@@ -22,6 +22,15 @@ function loadImage(path) {
     });
 }
 
+function formatDate(date) {
+    var hours = date.getHours()
+    var minutes = date.getMinutes()
+    minutes = minutes < 10 ? '0' + minutes : minutes
+    var strTime = hours + ':' + minutes
+    return date.getFullYear() + "/" + (date.getMonth() + 1) + "/" + date.getDate() + "  " + strTime
+}
+
+
 function rowSpeedForLevel(level) {
     const levelTime = Math.pow(0.8 - ((level - 1) * 0.007), level - 1)
     return levelTime * 1000
@@ -47,7 +56,7 @@ function msToTime(duration) {
     minutes = (minutes < 10) ? "0" + minutes : minutes
     seconds = (seconds < 10) ? "0" + seconds : seconds
   
-    return hours + " " + minutes + " " + seconds
+    return hours + ":" + minutes + ":" + seconds
 }
 
 function isTouchDevice() {
@@ -83,10 +92,10 @@ function createParticle(renderParticle, x, y, angleInDegree, speed, gravity, rot
 }
 
 // 随机颜色方块粒子
-function randomColorBlockParticle() {
+function randomColorBlockParticle(baseSize) {
     let candidateColor = ["rgb(255,29,88)", "rgb(24,89,144)", "rgb(255,246,133)", "rgb(0,221,255)", "rgb(0,73,183)"]
     const color = candidateColor[Math.floor(Math.random() * candidateColor.length)]
-    const size = Math.random() * 10
+    const size = Math.random() * baseSize
     const ctx = game.render.getAnimationContext()
     return function (xPosition, yPosition, rotate, trans) {
         ctx.save()
@@ -96,9 +105,6 @@ function randomColorBlockParticle() {
         ctx.restore()
     }
 }
-
-
-
 
 class Renderer {
 
@@ -242,6 +248,8 @@ class Renderer {
             ctx.strokeStyle = 'rgb(60,60,60)'
             ctx.lineWidth = 1
             ctx.beginPath()
+            // console.log(this.gameX + i * this.blockSizeInPixels, this.gameY) 
+            // console.log(this.gameX + i * this.blockSizeInPixels, this.height + this.gameY) 
             ctx.moveTo(this.gameX + i * this.blockSizeInPixels, this.gameY)
             ctx.lineTo(this.gameX + i * this.blockSizeInPixels, this.height + this.gameY)
             ctx.stroke()
@@ -335,15 +343,6 @@ class Renderer {
 
         this.drawHold(hold)
         this.drawNextBlock(nextBlocks)
-    }
-
-    eraseLine(row) {
-        let x = this.gameX
-        let y = (row - 2) * this.blockSizeInPixels + this.gameY
-        let height = this.blockSizeInPixels
-        let width = this.gameWidth
-        const ctx = this.canvas.getContext('2d')
-        ctx.clearRect(x, y, width, height)
     }
 
     drawBlock(row, col, style, trans) {
@@ -732,20 +731,25 @@ const gameOverAnimation = function () {
         const ctx = game.render.getAnimationContext()
         const height = game.render.windowHeight 
         const width = game.render.width
-        const bannerHeight = 200 * (progress / 20.0)
-        const trans = 0.8 * (progress / 20.0)
+        const bannerHeight = game.render.height * 0.4 * (progress / 40.0)
+        const trans = 0.8 * (progress / 40.0)
+        const fontSize = Math.round(bannerHeight * 0.2)
+        const bannerY = (height - bannerHeight) / 2 * 0.8
 
         ctx.fillStyle = "rgba(50,50,50," + trans + ")";
-        ctx.fillRect(0, (height - bannerHeight) / 2 * 0.8, width, bannerHeight)
+        ctx.fillRect(0, bannerY, width, bannerHeight)
 
-        if (progress > 10) {
-            ctx.font = "48px pixeboy";
-            ctx.fillStyle = "rgba(251,226,81," + ((progress - 10)/10) + ")";
+        if (progress > 20) {
+            ctx.font = fontSize + "px pixeboy";
+            ctx.fillStyle = "rgba(251,226,81," + ((progress - 20)/20) + ")";
             const textMetric = ctx.measureText("GAME  OVER");
-            ctx.fillText("GAME  OVER", (width - textMetric.width) / 2,  bannerHeight / 2 + (height - bannerHeight) / 2 * 0.82);
+            ctx.fillText("GAME  OVER", (width - textMetric.width) / 2,  bannerY);
         }
-
-        if (progress == 20) {
+        // 显示游戏排行榜
+        if (progress > 20) {
+            // console.log(game.getScoreRank())
+        }
+        if (progress == 40) {
             return 1
         } else {
             progress += 1
@@ -761,15 +765,15 @@ function clearLineAnimation(lines) {
     const firstPhase = Math.round(totalLength * 0.4)
     const secondPhase = totalLength - firstPhase
     return function (game) {
-        let particleNum = 5
+        const particleSize = Math.round(game.render.height * 0.015)
+        let particleNum = 8
         const ctx = game.render.getAnimationContext()
         if (lines.length > 10) {
-            particleNum = 2
+            particleNum = 0
         }
         if (progress < totalLength) {
             for (let i in lines) {
                 const row = lines[i]
-
                 let x = game.render.gameX
                 let y = (row - 2) * game.render.blockSizeInPixels + game.render.gameY
                 let height = game.render.blockSizeInPixels
@@ -781,17 +785,19 @@ function clearLineAnimation(lines) {
                 // 第二阶段：化作彩色粒子飞散消失
                 } else {
                     if (progress == firstPhase + 1) {
-                        game.render.eraseLine(row)
+                        for (let j = 0;  j < game.stack[row].length; ++j) {
+                            game.stack[row][j] = null
+                        }
                     }
                     const trans = 1.0 - ((progress - firstPhase) / secondPhase)
                     ctx.fillStyle = "rgba(255,255,255," + trans + ")";
                     width = width * (1.0 - (progress - firstPhase) / secondPhase)
                     x = x + (game.render.gameWidth - width) / 2
                     for (let i = 0; i < particleNum; ++i) {
-                        let particle = createParticle(randomColorBlockParticle(), 
+                        let particle = createParticle(randomColorBlockParticle(particleSize), 
                             x, y + game.render.blockSizeInPixels / 2, (90 + (135 - 90) * Math.random()), 10 + 5 * Math.random(), 30, 20, 40)
                         game.animations.push(particle)
-                        particle = createParticle(randomColorBlockParticle(), 
+                        particle = createParticle(randomColorBlockParticle(particleSize), 
                             x + width, y + game.render.blockSizeInPixels / 2, 45 + (90 - 45) * Math.random(), 10 + 5 * Math.random(), 30, 20, 40)
                         game.animations.push(particle)
                     }
@@ -822,9 +828,13 @@ function highlightAnimation(positions) {
                 if (progress <= 8) {
                     const trans = 0.8 * (progress / 8)
                     ctx.fillStyle = "rgba(255,255,255," + trans + ")";
+                    ctx.shadowColor = "white";
+                    ctx.shadowBlur = (progress / 8) * 15
                 } else {
                     const trans = 0.8 - 0.8 * ((progress - 8) / 7.0)
                     ctx.fillStyle = "rgba(255,255,255," + trans + ")";
+                    ctx.shadowColor = "white";
+                    ctx.shadowBlur = (1.0 - ((progress - 8) / 7.0)) * 15
                 }
                 ctx.fillRect(x, y, game.render.blockSizeInPixels, game.render.blockSizeInPixels)
             }
@@ -892,6 +902,8 @@ function hardDropAnimation(positions, render) {
                 gradient.addColorStop(0.7, "rgb(100,100,100,0.8)");
                 gradient.addColorStop(1, "rgb(80,80,80,0)");
                 ctx.fillStyle = gradient;
+                ctx.shadowColor = "white";
+                ctx.shadowBlur = (progress / 8) * 10
                 ctx.fillRect(line[0], lineY, line[2], line[3])
             }
             progress += 1
@@ -904,7 +916,7 @@ function hardDropAnimation(positions, render) {
 
 class Game {
 
-    constructor(animationCanvas, uiCanvas, canvas, gamePadCanvas, config) {
+    constructor(animationCanvas, uiCanvas, canvas, gamePadCanvas, config, storage) {
         this.candidates = [JBlock, ZBlock, LBlock, IBlock, OBlock, TBlock, SBlock]
         this.config = config
         this.render = new Renderer(animationCanvas, uiCanvas, canvas, gamePadCanvas, config)
@@ -913,7 +925,6 @@ class Game {
         this.afterPause = null
         this.keyPressed = {}
         this.keyTimer = {}
-
         this.clearTouch()
         this.lastAction = null
         this.block = null
@@ -928,6 +939,32 @@ class Game {
         this.clearCount = 0
         this.beginTime = null
         this.endTime = null
+        this.storage = storage
+    }
+
+    getScoreRank() {
+        let scores = this.storage.getItem("score_rank")
+        if (scores == null) {
+            return []
+        }
+        return JSON.parse(scores)
+    }
+
+    addToScoreRank(score, useTime, clearLine) {
+        let rank = this.getScoreRank()
+        let playedAt = formatDate(new Date())
+        rank.push({
+            score: score, 
+            useTime: useTime,
+            clearLine: clearLine,
+            playedAt: playedAt
+        })
+        // 按 score 排序取前 10
+        rank.sort((a,b) => (a.score > b.score) ? -1 : ((b.score > a.score) ? 1 : 0))
+        if (rank.length > 20) {
+            rank = rank.slice(0, 20)
+        }
+        this.storage.setItem("score_rank", JSON.stringify(rank))
     }
 
     initializeUI() {
@@ -1357,6 +1394,7 @@ class Game {
                 for (let i = 0; i < this.stack.length; ++i) {
                     allLines.push(i)
                 }
+                this.addToScoreRank(this.score, msToTime(this.endTime - this.beginTime), this.clearCount)
                 this.state = "pause_game"
                 this.animations.push(gameOverAnimation())
                 this.animations.push(clearLineAnimation(allLines))
@@ -1439,7 +1477,7 @@ class Game {
 }
 
 
-const game = new Game(animationCanvas, uiCanvas, canvas, gamePadCanvas, globalConfig)
+const game = new Game(animationCanvas, uiCanvas, canvas, gamePadCanvas, globalConfig, this.localStorage)
 window.addEventListener("load", function () {
     // 初始化 UI
     game.initializeUI().loadResource().then(function () {
