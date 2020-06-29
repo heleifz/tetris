@@ -936,8 +936,6 @@ function hardDropAnimation(positions, render) {
                 gradient.addColorStop(0.7, "rgb(100,100,100,0.8)");
                 gradient.addColorStop(1, "rgb(80,80,80,0)");
                 ctx.fillStyle = gradient;
-                ctx.shadowColor = "white";
-                ctx.shadowBlur = (progress / 8) * 10
                 ctx.fillRect(line[0], lineY, line[2], line[3])
             }
             progress += 1
