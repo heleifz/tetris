@@ -1519,9 +1519,10 @@ class Game {
         let that = this;
         return new Promise((resolve, reject) => {
             let audio = new Audio(path)
-            audio.addEventListener("canplaythrough", function () {
-                resolve(audio);
-            })
+            // audio.addEventListener("canplaythrough", function () {
+            //     resolve(audio);
+            // })
+            resolve(audio);
         });
     }
 
