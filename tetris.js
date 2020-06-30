@@ -732,7 +732,7 @@ function drawRankList(ctx, x, y, width, height, totalProgress, progress, game) {
     const middle = Math.round(x + (width / 2))
     let inRank = false
     const rankSize = Math.min(10, rankList.length)
-    const startY = y * 1.23
+    const startY = Math.round(y * 1.27)
     for (let i = 0; i < rankSize; ++i) {
         let item = rankList[i]
         if (rankList[i].score == game.score) {
@@ -742,18 +742,18 @@ function drawRankList(ctx, x, y, width, height, totalProgress, progress, game) {
             ctx.fillStyle = "rgba(255,255,255," + ((progress)/totalProgress) + ")";
         }
         ctx.textAlign = "right";
-        ctx.fillText(item.score, middle - height * 0.3, startY + fontSize * i);
+        ctx.fillText(item.score, middle - height * 0.35, startY + fontSize * i);
         ctx.textAlign = "left";
-        ctx.fillText(item.clearLine, middle - height * 0.2, startY + fontSize * i);
+        ctx.fillText(item.clearLine, middle - height * 0.25, startY + fontSize * i);
         ctx.textAlign = "left";
         ctx.fillText(item.playedAt, middle,  startY + fontSize * i);
     }
     if (!inRank) {
         ctx.fillStyle = "rgba(200,0,0," + ((progress)/totalProgress) + ")";
         ctx.textAlign = "right";
-        ctx.fillText(game.score, middle - height * 0.3,  startY + fontSize * rankSize);
+        ctx.fillText(game.score, middle - height * 0.35,  startY + fontSize * rankSize);
         ctx.textAlign = "left";
-        ctx.fillText(game.clearCount, middle - height * 0.2,  startY + fontSize * rankSize);
+        ctx.fillText(game.clearCount, middle - height * 0.25,  startY + fontSize * rankSize);
         ctx.textAlign = "left";
         ctx.fillText(formatDate(new Date()), middle, startY + fontSize * rankSize);
     }
@@ -765,9 +765,9 @@ const gameOverAnimation = function () {
         const ctx = game.render.getAnimationContext()
         const height = game.render.windowHeight 
         const width = game.render.width
-        const bannerHeight = game.render.height * 0.4 * (progress / 40.0)
+        const bannerHeight = game.render.height * 0.5 * (progress / 40.0)
         const trans = 0.8 * (progress / 40.0)
-        const fontSize = Math.round(bannerHeight * 0.15)
+        const fontSize = Math.round(bannerHeight * 0.12)
         const bannerY = (height - bannerHeight) / 2 * 0.8
 
         ctx.fillStyle = "rgba(50,50,50," + trans + ")";
@@ -863,12 +863,12 @@ function highlightAnimation(positions) {
                     const trans = 0.8 * (progress / 8)
                     ctx.fillStyle = "rgba(255,255,255," + trans + ")";
                     ctx.shadowColor = "white";
-                    ctx.shadowBlur = (progress / 8) * 15
+                    ctx.shadowBlur = (progress / 8) * 20
                 } else {
                     const trans = 0.8 - 0.8 * ((progress - 8) / 7.0)
                     ctx.fillStyle = "rgba(255,255,255," + trans + ")";
                     ctx.shadowColor = "white";
-                    ctx.shadowBlur = (1.0 - ((progress - 8) / 7.0)) * 15
+                    ctx.shadowBlur = (1.0 - ((progress - 8) / 7.0)) * 29
                 }
                 ctx.fillRect(x, y, game.render.blockSizeInPixels, game.render.blockSizeInPixels)
             }
@@ -1125,6 +1125,8 @@ class Game {
         const updatedScore = this.getClearLineScore(clearResult[0].length, clearResult[2], tspin)
         if (clearResult[0].length > 0) {
             this.state = "pause_game"
+            this.audio["clear_line"].currentTime = 0
+            this.audio["clear_line"].play()
             this.animations.push(clearLineAnimation(clearResult[0]))
             this.afterPause = function () {
                 this.comboCount = updatedScore[0]
@@ -1350,6 +1352,15 @@ class Game {
             if (nextMove[0] != this.position[0] || nextMove[1] != this.position[1] || nextMove[2] != this.rotation) {
                 this.resetDelayTimer()
                 this.lastAction = action
+                if (action in this.audio) {
+                    if ((action == "down" && dropType == null) || (this.block == OBlock && action == "clockwise")) {
+                        
+                    } else {
+                        this.audio[action].currentTime = 0
+                        this.audio[action].play()
+                        console.log(action)
+                    }
+                }
             }
             const dropCell = nextMove[0] - this.position[0]
             this.updateDropScore(dropCell, dropType)
@@ -1504,8 +1515,29 @@ class Game {
         }
     }
 
+    loadSound(path) {
+        let that = this;
+        return new Promise((resolve, reject) => {
+            let audio = new Audio(path)
+            audio.addEventListener("canplaythrough", function () {
+                resolve(audio);
+            })
+        });
+    }
+
     async loadResource() {
         await this.render.loadResource()
+        this.audio = {}
+        this.audio["clockwise"] = await this.loadSound("rotate.wav")
+        this.audio["clockwise"].volume = 0.3;
+        this.audio["left"] = await this.loadSound("move.wav")
+        this.audio["left"].volume = 0.3;
+        
+        this.audio["right"] = this.audio["left"]
+        this.audio["down"] = this.audio["left"]
+        this.audio["hard_drop"] = await this.loadSound("drop.wav")
+        this.audio["clear_line"] = await this.loadSound("clear.wav")
+        this.audio["clear_line"].volume = 0.3;
     }
 }
 
