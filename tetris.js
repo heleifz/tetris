@@ -1125,8 +1125,8 @@ class Game {
         const updatedScore = this.getClearLineScore(clearResult[0].length, clearResult[2], tspin)
         if (clearResult[0].length > 0) {
             this.state = "pause_game"
-            this.audio["clear_line"].currentTime = 0
-            this.audio["clear_line"].play()
+            // this.audio["clear_line"].currentTime = 0
+            // this.audio["clear_line"].play()
             this.animations.push(clearLineAnimation(clearResult[0]))
             this.afterPause = function () {
                 this.comboCount = updatedScore[0]
@@ -1352,15 +1352,15 @@ class Game {
             if (nextMove[0] != this.position[0] || nextMove[1] != this.position[1] || nextMove[2] != this.rotation) {
                 this.resetDelayTimer()
                 this.lastAction = action
-                if (action in this.audio) {
-                    if ((action == "down" && dropType == null) || (this.block == OBlock && action == "clockwise")) {
+                // if (action in this.audio) {
+                //     if ((action == "down" && dropType == null) || (this.block == OBlock && action == "clockwise")) {
                         
-                    } else {
-                        this.audio[action].currentTime = 0
-                        this.audio[action].play()
-                        console.log(action)
-                    }
-                }
+                //     } else {
+                //         this.audio[action].currentTime = 0
+                //         this.audio[action].play()
+                //         console.log(action)
+                //     }
+                // }
             }
             const dropCell = nextMove[0] - this.position[0]
             this.updateDropScore(dropCell, dropType)
@@ -1527,17 +1527,17 @@ class Game {
 
     async loadResource() {
         await this.render.loadResource()
-        this.audio = {}
-        this.audio["clockwise"] = await this.loadSound("rotate.wav")
-        this.audio["clockwise"].volume = 0.3;
-        this.audio["left"] = await this.loadSound("move.wav")
-        this.audio["left"].volume = 0.3;
+        // this.audio = {}
+        // this.audio["clockwise"] = await this.loadSound("rotate.wav")
+        // this.audio["clockwise"].volume = 0.3;
+        // this.audio["left"] = await this.loadSound("move.wav")
+        // this.audio["left"].volume = 0.3;
         
-        this.audio["right"] = this.audio["left"]
-        this.audio["down"] = this.audio["left"]
-        this.audio["hard_drop"] = await this.loadSound("drop.wav")
-        this.audio["clear_line"] = await this.loadSound("clear.wav")
-        this.audio["clear_line"].volume = 0.3;
+        // this.audio["right"] = this.audio["left"]
+        // this.audio["down"] = this.audio["left"]
+        // this.audio["hard_drop"] = await this.loadSound("drop.wav")
+        // this.audio["clear_line"] = await this.loadSound("clear.wav")
+        // this.audio["clear_line"].volume = 0.3;
     }
 }
 
