@@ -975,6 +975,7 @@ class Game {
 
         window.AudioContext = window.AudioContext || window.webkitAudioContext
         this.audioContext = new AudioContext()
+        this.bgmReady = false
     }
 
     getScoreRank() {
@@ -1533,10 +1534,13 @@ class Game {
         });
     }
 
-    playAudioBuffer(buffer) {
+    playAudioBuffer(buffer, loop) {
         var source = this.audioContext.createBufferSource()
         source.buffer = buffer
         source.connect(this.audioContext.destination)
+        if (loop === true) {
+            source.loop = true
+        }
         source.start(0)
     }
 
@@ -1544,7 +1548,8 @@ class Game {
         await this.render.loadResource()
         this.audio = {}
         let audioBuffers =  await Promise.all([this.loadSoundBuffer("rotate.wav"), this.loadSoundBuffer("move.wav"),
-                                               this.loadSoundBuffer("drop.wav"), this.loadSoundBuffer("clear.wav")])
+                                               this.loadSoundBuffer("drop.wav"), this.loadSoundBuffer("clear.wav"),
+                                               this.loadSoundBuffer("bgm.mp3")])
         this.audio["clockwise"] = audioBuffers[0]
         // this.audio["clockwise"].volume = 0.3;
         this.audio["left"] = audioBuffers[1]
@@ -1554,6 +1559,7 @@ class Game {
         this.audio["down"] = this.audio["left"]
         this.audio["hard_drop"] = audioBuffers[2]
         this.audio["clear_line"] = audioBuffers[3]
+        this.audio["bgm"] = audioBuffers[4]
         // this.audio["clear_line"].volume = 0.3;
     }
 }
@@ -1565,12 +1571,20 @@ window.addEventListener("load", function () {
     game.initializeUI().loadResource().then(function () {
         game.run(1)
         document.addEventListener('keydown', function (e) {
+            if (!game.bgmReady) {
+                game.bgmReady = true
+                game.playAudioBuffer(game.audio["bgm"], true)
+            }
             game.control(e.code, 'down')
         })
         document.addEventListener('keyup', function (e) {
             game.control(e.code, 'up')
         })
         function onTouchStart(e) {
+            if (!game.bgmReady) {
+                game.bgmReady = true
+                game.playAudioBuffer(game.audio["bgm"], true)
+            }
             var touches = e.changedTouches;
             for (let i = 0; i < touches.length; i++) {
                 let t = touches[i] 
