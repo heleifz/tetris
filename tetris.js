@@ -1129,7 +1129,7 @@ class Game {
         const updatedScore = this.getClearLineScore(clearResult[0].length, clearResult[2], tspin)
         if (clearResult[0].length > 0) {
             this.state = "pause_game"
-            this.playAudioBuffer(this.audio["clear_line"])
+            this.playAudioBuffer(this.audio["clear_line"], 0.2)
             this.animations.push(clearLineAnimation(clearResult[0]))
             this.afterPause = function () {
                 this.comboCount = updatedScore[0]
@@ -1359,7 +1359,7 @@ class Game {
                     if ((action == "down" && dropType == null) || (this.block == OBlock && action == "clockwise")) {
                         
                     } else {
-                        this.playAudioBuffer(this.audio[action])
+                        this.playAudioBuffer(this.audio[action], 0.1)
                     }
                 }
             }
@@ -1534,10 +1534,15 @@ class Game {
         });
     }
 
-    playAudioBuffer(buffer, loop) {
+    playAudioBuffer(buffer, vol, loop) {
         var source = this.audioContext.createBufferSource()
         source.buffer = buffer
-        source.connect(this.audioContext.destination)
+
+        let gainNode = this.audioContext.createGain();
+        gainNode.gain.setValueAtTime(vol, this.audioContext.currentTime)
+
+        source.connect(gainNode);
+        gainNode.connect(this.audioContext.destination)
         if (loop === true) {
             source.loop = true
         }
@@ -1573,7 +1578,7 @@ window.addEventListener("load", function () {
         document.addEventListener('keydown', function (e) {
             if (!game.bgmReady) {
                 game.bgmReady = true
-                game.playAudioBuffer(game.audio["bgm"], true)
+                game.playAudioBuffer(game.audio["bgm"], 0.3, true)
             }
             game.control(e.code, 'down')
         })
@@ -1583,7 +1588,7 @@ window.addEventListener("load", function () {
         function onTouchStart(e) {
             if (!game.bgmReady) {
                 game.bgmReady = true
-                game.playAudioBuffer(game.audio["bgm"], true)
+                game.playAudioBuffer(game.audio["bgm"], 0.3, true)
             }
             var touches = e.changedTouches;
             for (let i = 0; i < touches.length; i++) {
