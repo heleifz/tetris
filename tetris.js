@@ -972,6 +972,9 @@ class Game {
         this.beginTime = null
         this.endTime = null
         this.storage = storage
+
+        window.AudioContext = window.AudioContext || window.webkitAudioContext
+        this.audioContext = new AudioContext()
     }
 
     getScoreRank() {
@@ -1125,8 +1128,7 @@ class Game {
         const updatedScore = this.getClearLineScore(clearResult[0].length, clearResult[2], tspin)
         if (clearResult[0].length > 0) {
             this.state = "pause_game"
-            // this.audio["clear_line"].currentTime = 0
-            // this.audio["clear_line"].play()
+            this.playAudioBuffer(this.audio["clear_line"])
             this.animations.push(clearLineAnimation(clearResult[0]))
             this.afterPause = function () {
                 this.comboCount = updatedScore[0]
@@ -1352,15 +1354,13 @@ class Game {
             if (nextMove[0] != this.position[0] || nextMove[1] != this.position[1] || nextMove[2] != this.rotation) {
                 this.resetDelayTimer()
                 this.lastAction = action
-                // if (action in this.audio) {
-                //     if ((action == "down" && dropType == null) || (this.block == OBlock && action == "clockwise")) {
+                if (action in this.audio) {
+                    if ((action == "down" && dropType == null) || (this.block == OBlock && action == "clockwise")) {
                         
-                //     } else {
-                //         this.audio[action].currentTime = 0
-                //         this.audio[action].play()
-                //         console.log(action)
-                //     }
-                // }
+                    } else {
+                        this.playAudioBuffer(this.audio[action])
+                    }
+                }
             }
             const dropCell = nextMove[0] - this.position[0]
             this.updateDropScore(dropCell, dropType)
@@ -1515,28 +1515,45 @@ class Game {
         }
     }
 
-    loadSound(path) {
+    loadSoundBuffer(path) {
         let that = this;
+        let ctx = this.audioContext
         return new Promise((resolve, reject) => {
-            let audio = new Audio(path)
-            audio.addEventListener("canplaythrough", function () {
-                resolve(audio);
-            })
+            var request = new XMLHttpRequest();
+            request.open('GET', path, true);
+            request.responseType = 'arraybuffer';
+            request.onload = function () {
+                ctx.decodeAudioData(request.response, function (buffer) {
+                    resolve(buffer)
+                }, function () {
+                    reject()
+                });
+            }
+            request.send();
         });
+    }
+
+    playAudioBuffer(buffer) {
+        var source = this.audioContext.createBufferSource()
+        source.buffer = buffer
+        source.connect(this.audioContext.destination)
+        source.start(0)
     }
 
     async loadResource() {
         await this.render.loadResource()
         this.audio = {}
-        // this.audio["clockwise"] = await this.loadSound("rotate.wav")
+        let audioBuffers =  await Promise.all([this.loadSoundBuffer("rotate.wav"), this.loadSoundBuffer("move.wav"),
+                                               this.loadSoundBuffer("drop.wav"), this.loadSoundBuffer("clear.wav")])
+        this.audio["clockwise"] = audioBuffers[0]
         // this.audio["clockwise"].volume = 0.3;
-        // this.audio["left"] = await this.loadSound("move.wav")
+        this.audio["left"] = audioBuffers[1]
         // this.audio["left"].volume = 0.3;
         
-        // this.audio["right"] = this.audio["left"]
-        // this.audio["down"] = this.audio["left"]
-        // this.audio["hard_drop"] = await this.loadSound("drop.wav")
-        // this.audio["clear_line"] = await this.loadSound("clear.wav")
+        this.audio["right"] = this.audio["left"]
+        this.audio["down"] = this.audio["left"]
+        this.audio["hard_drop"] = audioBuffers[2]
+        this.audio["clear_line"] = audioBuffers[3]
         // this.audio["clear_line"].volume = 0.3;
     }
 }
