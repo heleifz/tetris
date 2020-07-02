@@ -104,8 +104,8 @@ export function hardDropAnimation(positions, render) {
         for (let x = minX; x <= maxX; x += 20) {
             for (let i = 0; i < 2; ++i) {
                 const realX = x + 30 * (0.5 - Math.random())
-                if (realX < (game.render.gameX + game.render.gameWidth) && realX > game.render.gameX) {
-                    dropLines.push([realX, Math.max(game.render.gameY, endY - lineHeight - Math.random() * 150), 6 * Math.random(), lineHeight * (1 - 0.1 * Math.random())])
+                if (realX < (render.gameX + render.gameWidth) && realX > render.gameX) {
+                    dropLines.push([realX, Math.max(render.gameY, endY - lineHeight - Math.random() * 150), 6 * Math.random(), lineHeight * (1 - 0.1 * Math.random())])
                 }
             }
         }
