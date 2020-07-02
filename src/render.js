@@ -1,5 +1,5 @@
 import skinImg from "./assets/img/lego-3.png"
-import {loadImage, isTouchDevice} from "./util.js"
+import {boundingBox, loadImage, isTouchDevice} from "./util.js"
 
 export default class Render {
 
