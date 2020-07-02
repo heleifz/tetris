@@ -36,10 +36,10 @@ export function clearLineAnimation(lines) {
                     width = width * (1.0 - (progress - firstPhase) / secondPhase)
                     x = x + (game.render.gameWidth - width) / 2
                     for (let i = 0; i < particleNum; ++i) {
-                        let particle = createParticle(randomColorBlockParticle(particleSize), 
+                        let particle = createParticle(randomColorBlockParticle(particleSize, game.render), 
                             x, y + game.render.blockSizeInPixels / 2, (90 + (135 - 90) * Math.random()), 10 + 5 * Math.random(), 30, 20, 40)
                         game.animations.push(particle)
-                        particle = createParticle(randomColorBlockParticle(particleSize), 
+                        particle = createParticle(randomColorBlockParticle(particleSize, game.render), 
                             x + width, y + game.render.blockSizeInPixels / 2, 45 + (90 - 45) * Math.random(), 10 + 5 * Math.random(), 30, 20, 40)
                         game.animations.push(particle)
                     }
@@ -152,12 +152,12 @@ function createParticle(renderParticle, x, y, angleInDegree, speed, gravity, rot
 }
 
 // 随机颜色方块粒子
-function randomColorBlockParticle(baseSize) {
+function randomColorBlockParticle(baseSize, render) {
     let candidateColor = ["rgb(255,29,88)", "rgb(24,89,144)", "rgb(255,246,133)", "rgb(0,221,255)", "rgb(0,73,183)"]
     const color = candidateColor[Math.floor(Math.random() * candidateColor.length)]
     const size = Math.random() * baseSize
-    const ctx = game.render.getAnimationContext()
     return function (xPosition, yPosition, rotate, trans) {
+        const ctx = render.getAnimationContext()
         ctx.save()
         ctx.fillStyle = color
         ctx.globalAlpha = trans
