@@ -115,6 +115,7 @@ class Renderer {
         this.canvas = canvas
         this.gamePadCanvas = gamePadCanvas
         this.config = config
+        this.virutalCanvas = document.createElement('canvas')
     }
 
     setUpCanvas(canvas) {
@@ -129,6 +130,7 @@ class Renderer {
 
         this.isTouch = isTouchDevice()
         this.animationContext = null
+        this.gameContext = null
         this.width = window.innerWidth * this.dpr
         this.windowHeight = window.innerHeight * this.dpr
 
@@ -140,6 +142,10 @@ class Renderer {
             this.blockSizeInPixels = Math.round(0.95 * this.width / gameRatio / this.config.lines)
             mobileScreen = true
         }
+        this.virutalCanvas.height = this.blockSizeInPixels
+        this.virutalCanvas.width = this.blockSizeInPixels * this.skin.blockTypeNum
+        let virtualContext = this.virutalCanvas.getContext('2d')
+        virtualContext.drawImage(this.skin.image, 0, 0, this.blockSizeInPixels * 8, this.blockSizeInPixels)
 
         this.gameWidth = this.blockSizeInPixels * this.config.columnSize
         this.height = this.blockSizeInPixels * this.config.lines
@@ -209,17 +215,18 @@ class Renderer {
         //     purple: [797, 0]
         // }
         this.skin.image = await loadImage("lego-4.png")
-        this.skin.blockSize = 30
-        this.skin.colorPosition = {
-            red: [0, 0],
-            blue: [30, 0],
-            yellow: [60, 0],
-            green: [90, 0],
-            cyan: [120, 0],
-            orange: [150, 0],
-            purple: [180, 0],
-            gray: [210, 0]
+        this.skin.blockTypeNum = 8
+        this.skin.colorPosition = { 
+            red: 0, 
+            blue: 1,
+            yellow: 2,
+            green: 3,
+            cyan: 4,
+            orange: 5,
+            purple: 6,
+            gray: 7
         }
+
     }
 
     getAnimationContext() {
@@ -227,6 +234,13 @@ class Renderer {
             this.animationContext = this.animationCanvas.getContext('2d')
         }
         return this.animationContext
+    }
+
+    getGameContext() {
+        if (this.gameContext === null) {
+            this.gameContext = this.canvas.getContext('2d')
+        }
+        return this.gameContext
     }
 
     clearAnimation() {
@@ -244,24 +258,18 @@ class Renderer {
         ctx.fillStyle = 'rgb(0,0,0,0.8)'
         ctx.fillRect(this.gameX, this.gameY, this.gameWidth, this.height)
         // 画网格
+        ctx.strokeStyle = 'rgb(60,60,60)'
+        ctx.lineWidth = 1
+        ctx.beginPath()
         for (let i = 1; i < this.config.columnSize; ++i) {
-            ctx.strokeStyle = 'rgb(60,60,60)'
-            ctx.lineWidth = 1
-            ctx.beginPath()
-            // console.log(this.gameX + i * this.blockSizeInPixels, this.gameY) 
-            // console.log(this.gameX + i * this.blockSizeInPixels, this.height + this.gameY) 
             ctx.moveTo(this.gameX + i * this.blockSizeInPixels, this.gameY)
             ctx.lineTo(this.gameX + i * this.blockSizeInPixels, this.height + this.gameY)
-            ctx.stroke()
         }
         for (let i = 1; i < this.config.lines; ++i) {
-            ctx.strokeStyle = 'rgb(60,60,60)'
-            ctx.lineWidth = 1
-            ctx.beginPath()
             ctx.moveTo(this.gameX, this.gameY + i * this.blockSizeInPixels)
             ctx.lineTo(this.gameX + this.gameWidth, this.gameY + i * this.blockSizeInPixels)
-            ctx.stroke()
         }
+        ctx.stroke()
         // 预览窗格
         ctx.fillStyle = 'rgb(0,0,0,0.85)'
         ctx.fillRect(this.titleX, this.gameY, this.titleWidth, this.titleHeight)
@@ -275,9 +283,11 @@ class Renderer {
         // hold
         ctx.fillStyle = 'rgb(0,0,0,0.85)'
         ctx.fillRect(this.titleX, this.holdY - this.titleHeight, this.titleWidth, this.titleHeight)
+
         ctx.fillStyle = "white"
         ctx.font = (this.titleHeight + 1) + "px pixeboy";
         ctx.fillText("hold", this.titleX, this.holdY);
+        
         ctx.fillStyle = 'rgb(0,0,0,0.6)'
         ctx.fillRect(this.titleX, this.holdY, this.titleWidth, this.holdHeight)
         // level
@@ -351,12 +361,14 @@ class Renderer {
         }
         let x = col * this.blockSizeInPixels + this.gameX
         let y = (row - 2) * this.blockSizeInPixels + this.gameY
-        const ctx = this.canvas.getContext('2d')
+        const ctx = this.getGameContext()
         const offset = this.skin.colorPosition[style]
         ctx.save()
-        ctx.globalAlpha = trans
-        ctx.drawImage(this.skin.image, offset[0], offset[1], this.skin.blockSize, this.skin.blockSize, 
-                      x, y, this.blockSizeInPixels, this.blockSizeInPixels)
+        if (trans < 1.0) {
+            ctx.globalAlpha = trans
+        }
+        ctx.drawImage(this.virutalCanvas, offset * this.blockSizeInPixels, 0,
+                      this.blockSizeInPixels, this.blockSizeInPixels, x, y, this.blockSizeInPixels, this.blockSizeInPixels)
         ctx.restore()
     }
     
@@ -376,9 +388,8 @@ class Renderer {
         for (let i = 0; i < positions.length; ++i) {
             let x = (positions[i][1] - minCol) * blockSize + this.titleX + xOffSet
             let y = (positions[i][0] - minRow) * blockSize + this.holdY + yOffSet
-            ctx.drawImage(this.skin.image, offset[0], offset[1], 
-                            this.skin.blockSize, this.skin.blockSize, 
-                            x, y, blockSize, blockSize)
+            ctx.drawImage(this.virutalCanvas, offset * this.blockSizeInPixels, 0,
+                          this.blockSizeInPixels, this.blockSizeInPixels, x, y, blockSize, blockSize)
         }
     }
 
@@ -404,9 +415,8 @@ class Renderer {
             for (let i = 0; i < positions.length; ++i) {
                 let x = (positions[i][1] - minCol) * blockSize + window[0] + xOffSet
                 let y = (positions[i][0] - minRow) * blockSize + window[1] + yOffSet
-                ctx.drawImage(this.skin.image, offset[0], offset[1], 
-                              this.skin.blockSize, this.skin.blockSize, 
-                              x, y, blockSize, blockSize)
+                ctx.drawImage(this.virutalCanvas, offset * this.blockSizeInPixels, 0,
+                              this.blockSizeInPixels, this.blockSizeInPixels, x, y, blockSize, blockSize)
             }
         }
     }
@@ -855,6 +865,7 @@ function highlightAnimation(positions) {
     return function (game) {
         if (progress < 16) {
             const ctx = game.render.getAnimationContext()
+            ctx.save()
             for (let i in positions) {
                 const p = positions[i]
                 let x = p[1] * game.render.blockSizeInPixels + game.render.gameX
@@ -872,6 +883,7 @@ function highlightAnimation(positions) {
                 }
                 ctx.fillRect(x, y, game.render.blockSizeInPixels, game.render.blockSizeInPixels)
             }
+            ctx.restore()
             progress += 1
         } else {
             return null
@@ -1573,7 +1585,8 @@ class Game {
 const game = new Game(animationCanvas, uiCanvas, canvas, gamePadCanvas, globalConfig, this.localStorage)
 window.addEventListener("load", function () {
     // 初始化 UI
-    game.initializeUI().loadResource().then(function () {
+    game.loadResource().then(function () {
+        game.initializeUI()
         game.run(1)
         document.addEventListener('keydown', function (e) {
             if (!game.bgmReady) {
