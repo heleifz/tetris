@@ -2,9 +2,10 @@
   "name": "tetris",
   "version": "1.0.0",
   "description": "tetris game reinvented",
-  "main": "index.js",
+  "private": true,
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo 'no test'",
+    "build": "webpack"
   },
   "repository": {
     "type": "git",
@@ -18,5 +19,12 @@
   "bugs": {
     "url": "https://github.com/heleifz/tetris/issues"
   },
-  "homepage": "https://github.com/heleifz/tetris#readme"
+  "homepage": "https://github.com/heleifz/tetris#readme",
+  "devDependencies": {
+    "css-loader": "^3.6.0",
+    "file-loader": "^6.0.0",
+    "style-loader": "^1.2.1",
+    "webpack": "^4.43.0",
+    "webpack-cli": "^3.3.12"
+  }
 }
