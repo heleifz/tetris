@@ -1,0 +1,38 @@
+@font-face { font-family: pixeboy; src: url('./font/pixeboy.ttf'); } 
+@font-face { font-family: ka1; src: url('./font/ka1.ttf'); } 
+html, body {
+    margin: 0 !important;
+    padding: 0 !important;
+}
+body {
+    background: #000000;
+    /* Prevent the ugly blue highlighting from accidental selection of text */ user-select: none;
+    -webkit-touch-callout: none !important;
+    -webkit-user-select: none !important;
+    -khtml-user-select: none !important; /* Konqueror HTML */
+    -moz-user-select: none !important; /* Old versions of Firefox */
+    -ms-user-select: none !important; /* Internet Explorer/Edge */
+
+    overflow: hidden;
+    top: 0; bottom: 0; left: 0; right: 0;
+    
+}
+@media only screen and (min-width: 800px)
+{
+    #wrapper {
+        position: absolute; 
+        top: 0; bottom: 0; left: 0; right: 0;
+        background-image: url('./img/background.jpg');
+        background-size: 100% 100%;
+    }
+}
+@media only screen and (max-width: 800px)
+{
+    /* 小屏幕背景图 */
+    #wrapper {
+        position: absolute; 
+        top: 0; bottom: 0; left: 0; right: 0;
+        background-image: url('./img/background.jpg');
+        background-size: cover;
+    }
+}
