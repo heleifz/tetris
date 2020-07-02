@@ -4,7 +4,7 @@ module.exports = {
   entry: './src/tetris.js',
   output: {
     filename: 'main.js',
-    publicPath: '/dist/',
+    publicPath: './dist/',
     path: path.resolve(__dirname, 'dist'),
   },
   module: {
