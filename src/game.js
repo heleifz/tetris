@@ -12,6 +12,7 @@ import {formatDate, shuffle, msToTime } from "./util.js"
 import {clearLineAnimation, highlightAnimation, hardDropAnimation, gameOverAnimation} from "./animation.js"
 import Render from "./render.js"
 import {KeyBoardInput, TouchInput} from "./input.js"
+import { DefaultScoreRule } from "./score-rule.js"
 
 // 游戏布局配置
 const globalConfig = {
@@ -42,11 +43,9 @@ class Game {
         this.hold = null
         this.holdTime = 0
         this.stack = null
-        this.score = 0
-        this.levelLineClear = 0
-        this.regretTime = 0
-        this.comboCount = 0
-        this.clearCount = 0
+
+        this.scoreRule = null
+
         this.beginTime = null
         this.endTime = null
         this.storage = storage
@@ -108,9 +107,11 @@ class Game {
         return stack
     }
 
-    run(level) {
-        this.level = level
-        this.beginLevel = level
+    setRule(scoreRule) {
+        this.scoreRule = scoreRule
+    }
+
+    run() {
         this.resetFallTimer()
         const that = this;
         function redraw() {
@@ -138,19 +139,14 @@ class Game {
         clearTimeout(this.fallTimerId)
     }
     
-    rowSpeedForLevel(level) {
-        const levelTime = Math.pow(0.8 - ((level - 1) * 0.007), level - 1)
-        return levelTime * 1000
-    }
-
     resetFallTimer() {
         this.stopFallTimer()
-        this.levelTime = this.rowSpeedForLevel(this.level)
+        const speed = this.scoreRule.dropSpeed()
         const that = this;
         this.fallTimerId = setTimeout(function () {
             that.stateMachine("fall")
             that.resetFallTimer()
-        }, this.levelTime);
+        }, speed)
     }
 
     newDrop() {
@@ -205,33 +201,24 @@ class Game {
         // 高亮锁定块
         let positions = this.block.positions(this.position[0], this.position[1], this.rotation)
         this.animations.push(highlightAnimation(positions))
+        for (let i = 0; i < positions.length; ++i) {
+            this.stack[positions[i][0]][positions[i][1]] = this.block.style
+        }
+        this.block = null
         // 看是否能消除
         const clearResult = this.clearLines()
         const tspin = this.TSpinType()
-        const updatedScore = this.getClearLineScore(clearResult[0].length, clearResult[2], tspin)
         if (clearResult[0].length > 0) {
             this.state = "pause_game"
             this.playAudioBuffer(this.audio["clear_line"], 0.2)
             this.animations.push(clearLineAnimation(clearResult[0]))
             this.afterPause = function () {
-                this.comboCount = updatedScore[0]
-                this.score = updatedScore[1]
-                this.clearCount = updatedScore[2]
-                this.levelClearCount += clearResult[0].length
-                this.regretTime += updatedScore[3]
+                this.scoreRule.onClearLine(clearResult[0].length, clearResult[2], tspin)
                 this.stack = clearResult[1]
-                if (this.levelClearCount >= 10) {
-                    this.level += 1
-                    this.levelClearCount -= 10
-                }
                 this.newDrop()
             }
         } else {
-            this.comboCount = updatedScore[0]
-            this.score = updatedScore[1]
-            for (let i = 0; i < positions.length; ++i) {
-                this.stack[positions[i][0]][positions[i][1]] = this.block.style
-            }
+            this.scoreRule.onLock(tspin)
             this.newDrop()
         }
     }
@@ -239,35 +226,16 @@ class Game {
     clearLines() {
         let cleared = []
         let newStack = this.createEmptyStack()
-        let realLine = newStack.length - 1
-        let positions = this.block.positions(this.position[0], this.position[1], this.rotation)
-        for (let i = 0; i < positions.length; ++i) {
-            this.stack[positions[i][0]][positions[i][1]] = this.block.style
-        }
         let perfect = true
+        let realLine = this.stack.length - 1 
         for (let i = this.stack.length - 1; i >= 0; i--) {
-            let good = false
-            for (let j = 0; j < this.config.columnSize; ++j) {
-                if (this.stack[i][j] === null) {
-                    good = true
-                    break
-                }
-            }
-            if (good) {
-                for (let j = 0; j < this.config.columnSize; ++j) {
-                    if (this.stack[i][j] != null) {
-                        newStack[realLine][j] = this.stack[i][j]
-                        perfect = false
-                    }
-                }
+            let needClear = this.stack[i].every((e) => e !== null)
+            if (!needClear) {
+                newStack[realLine] = this.stack[i]
+                perfect = false
                 realLine -= 1
             } else {
                 cleared.push(i)
-            }
-        }
-        if (cleared.length == 0) {
-            for (let i = 0; i < positions.length; ++i) {
-                this.stack[positions[i][0]][positions[i][1]] = null
             }
         }
         return [cleared, newStack, perfect]
@@ -308,8 +276,9 @@ class Game {
         } else if (this.endTime != null) {
             useTime = this.endTime - this.beginTime
         }
-        this.render.drawStats(this.hold, this.nextBlocks, this.score, this.clearCount, 
-                              msToTime(useTime), this.regretTime, this.level)
+        this.render.drawStats(this.hold, this.nextBlocks, 
+                              this.scoreRule.score, this.scoreRule.lineCount, 
+                              msToTime(useTime), this.scoreRule.regret, this.scoreRule.level)
     }
 
     resetDelayTimer() {
@@ -333,71 +302,9 @@ class Game {
         return this.randomBlocks.shift()
     }
 
-    getClearLineScore(clearLineCount, isPerfect, tspin) {
-        let newCombo = 0
-        let newScore = this.score
-        let newClearCount = this.clearCount + clearLineCount
-        let newRegret = 0
-        if (clearLineCount > 0 || tspin != null) {
-            newCombo = this.comboCount + 1
-            if (clearLineCount == 1) {
-                if (tspin != null) {
-                    newScore += 800 * this.level
-                } else {
-                    newScore += 100 * this.level
-                }
-                if (isPerfect) {
-                    newScore += 800 * this.level
-                }
-            } else if (clearLineCount == 2) {
-                if (tspin != null) {
-                    newScore += 1200 * this.level
-                } else {
-                    newScore += 300 * this.level
-                }
-                if (isPerfect) {
-                    newScore += 1000 * this.level
-                }
-            } else if (clearLineCount == 3) {
-                if (tspin != null) {
-                    newScore += 1600 * this.level
-                } else {
-                    newScore += 500 * this.level
-                }
-                if (isPerfect) {
-                    newScore += 1800 * this.level
-                }
-            } else if (clearLineCount == 4) {
-                newScore += 800 * this.level
-                newRegret = 1
-                if (isPerfect) {
-                    newScore += 2000 * this.level
-                }
-            } else {
-                // t-spin
-                newScore += 400 * this.level
-            }
-
-            if (newCombo > 1) {
-                newScore += this.level * (newCombo - 1) * 50
-            }
-        } else {
-            newCombo = 0
-        }
-        return [newCombo, newScore, newClearCount, newRegret]
-    }
-
-    updateDropScore(dropCell, type) {
-        if (type == 'soft') {
-            this.score += dropCell
-        } else if (type == 'hard') {
-            this.score += 2 * dropCell
-        }
-    }
-
     stateMachine(action) {
         if (this.state == "begin") {
-            this.level = this.beginLevel
+            this.scoreRule.reset()
             this.afterPause = null
             this.animations = []
             this.randomBlocks = []
@@ -407,7 +314,6 @@ class Game {
             this.nextBlocks = [this.pickBlock(), this.pickBlock(), this.pickBlock()]
             this.hold = null
             this.holdTime = 0
-            this.regretTime = 1
             const center = Math.floor(this.config.columnSize / 2)
             const boxWidth = this.block.boundingBoxWidth
             const x = 1
@@ -416,10 +322,6 @@ class Game {
             this.position = [x, y]
             this.rotation = 0
             this.state = "dropping"
-            this.score = 0
-            this.comboCount = 0
-            this.levelClearCount = 0
-            this.clearCount = 0
             this.beginTime = Date.now()
             this.endTime = null
 
@@ -446,7 +348,7 @@ class Game {
                 }
             }
             const dropCell = nextMove[0] - this.position[0]
-            this.updateDropScore(dropCell, dropType)
+            this.scoreRule.onDrop(dropCell, dropType)
             this.position = [nextMove[0], nextMove[1]]
             this.rotation = nextMove[2]
             if (action == "hard_drop") {
@@ -477,7 +379,7 @@ class Game {
                 console.log("cannot hold two times")
             }
         } else if (this.state == "dropping" && action == 'regret') {
-            if (this.regretTime > 0) {
+            if (this.scoreRule.regret()) {
                 const center = Math.floor(this.config.columnSize / 2)
                 const boxWidth = this.block.boundingBoxWidth
                 const x = 1
@@ -485,7 +387,6 @@ class Game {
                 this.resetDelayTimer()
                 this.position = [x, y]
                 this.rotation = 0
-                this.regretTime -= 1
             } else {
                 console.log("cannot regret")
             }
@@ -607,6 +508,8 @@ window.addEventListener("load", function () {
     // 初始化 UI
     game.loadResource().then(function () {
         game.initializeUI()
+        // 游戏计分规则
+        game.setRule(new DefaultScoreRule(1))
         // 键盘和触控输入
         game.installInput(new KeyBoardInput()) 
         game.installInput(new TouchInput()) 

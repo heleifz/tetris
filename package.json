@@ -5,7 +5,8 @@
   "private": true,
   "scripts": {
     "test": "echo 'no test'",
-    "build": "webpack"
+    "build": "webpack",
+    "play": "webpack && http-server"
   },
   "repository": {
     "type": "git",

@@ -71,13 +71,9 @@ export function highlightAnimation(positions) {
                 if (progress <= 8) {
                     const trans = 0.8 * (progress / 8)
                     ctx.fillStyle = "rgba(255,255,255," + trans + ")";
-                    // ctx.shadowColor = "white";
-                    // ctx.shadowBlur = (progress / 8) * 20
                 } else {
                     const trans = 0.8 - 0.8 * ((progress - 8) / 7.0)
                     ctx.fillStyle = "rgba(255,255,255," + trans + ")";
-                    // ctx.shadowColor = "white";
-                    // ctx.shadowBlur = (1.0 - ((progress - 8) / 7.0)) * 29
                 }
                 ctx.fillRect(x, y, game.render.blockSizeInPixels, game.render.blockSizeInPixels)
             }
