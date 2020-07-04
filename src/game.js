@@ -11,6 +11,7 @@ import {JBlock, ZBlock, LBlock, IBlock, OBlock, TBlock, SBlock} from "./block.js
 import {formatDate, shuffle, msToTime } from "./util.js"
 import {clearLineAnimation, highlightAnimation, hardDropAnimation, gameOverAnimation} from "./animation.js"
 import Render from "./render.js"
+import {KeyBoardInput, TouchInput} from "./input.js"
 
 // 游戏布局配置
 const globalConfig = {
@@ -32,10 +33,9 @@ class Game {
         this.render = new Render(animationCanvas, uiCanvas, canvas, gamePadCanvas, config)
         this.state = "begin"
         this.animations = []
+        this.inputs = []
         this.afterPause = null
-        this.keyPressed = {}
-        this.keyTimer = {}
-        this.clearTouch()
+
         this.lastAction = null
         this.block = null
         this.nextBlocks = []
@@ -54,6 +54,14 @@ class Game {
         window.AudioContext = window.AudioContext || window.webkitAudioContext
         this.audioContext = new AudioContext()
         this.bgmReady = false
+    }
+
+    installInput(inputMethod) {
+        const that = this
+        inputMethod.install(function (action) {
+            that.control(action) 
+        })
+        this.inputs.push(inputMethod)
     }
 
     getScoreRank() {
@@ -88,16 +96,6 @@ class Game {
         return this
     }
     
-    indexForOngoingTouch(touch) {
-        const id = touch.identifier
-        for (let i = 0; i < this.ongoingTouches.length; i++) {
-            if (this.ongoingTouches[i].identifier == id) {
-                return i
-            }
-        }
-        return null
-    }
-
     createEmptyStack(showLines) {
         let stack = []
         for (let i = 0; i < this.config.lines + 2; i++) {
@@ -200,9 +198,10 @@ class Game {
         if (this.block == null) {
             return
         }
-        this.clearTouch()
+        for (let inp of this.inputs) {
+            inp.onGameEvent("lockblock")
+        }
         this.stopFallTimer()
-        
         // 高亮锁定块
         let positions = this.block.positions(this.position[0], this.position[1], this.rotation)
         this.animations.push(highlightAnimation(positions))
@@ -540,62 +539,17 @@ class Game {
         }
     }
 
-    clearTouch() {
-        this.ongoingTouches = []
-        this.touchNoMove = []
-        this.ongoingTouchesStart = []
-        this.touchTrace = []
-        this.ongoingTouchesTime = []
-    }
-
-    control(key, type) {
-        const keyMap = {
-            ArrowLeft: "left",
-            ArrowRight: "right",
-            ArrowDown: "down",
-            ArrowUp: "clockwise",
-            Space: "hard_drop",
-            MetaLeft: "hold",
-            TouchLeft: "left",
-            TouchRight: "right",
-            TouchDrop: "hard_drop",
-            TouchRegret: "regret",
-            TouchDown: "down",
-            TouchHold: "hold",
-            TouchClockwise: "clockwise",
+    control(action) {
+        let validAction = {
+            left: 1, right: 1, down: 1, clockwise: 1, counter_clockwise: 1,
+            hard_drop: 1
         }
-        if (!(key in keyMap)) {
-            return
+        if (!game.bgmReady) {
+            game.bgmReady = true
+            game.playAudioBuffer(game.audio["bgm"], 0.3, true)
         }
-        let action = keyMap[key]
-        let noPress = 1
-        if (action in this.keyPressed && this.keyPressed[action] == 1) {
-            noPress = 0
-        }
-        if (type == "down") {
+        if ((action in validAction)) {
             this.stateMachine(action)
-            if (!this.render.isTouch) {
-                this.keyPressed[action] = 1
-                if (action == "left" || action == "right" || action == "down") {
-                    if (noPress) {
-                        const that = this
-                        function pressFunc() {
-                            if (that.keyPressed[action] == 1) {
-                                that.stateMachine(action)
-                                setTimeout(pressFunc, 30)
-                            }
-                        }
-                        clearTimeout(this.keyTimer[action])
-                        this.keyTimer[action] = setTimeout(pressFunc, 250)
-                    }
-                }
-            }
-        } else {
-            if (!this.isTouch) {
-                this.keyPressed[action] = 0
-                clearTimeout(this.keyTimer[action])
-                this.keyTimer[action] = null
-            }
         }
     }
 
@@ -648,119 +602,15 @@ class Game {
     }
 }
 
-
 const game = new Game(animationCanvas, uiCanvas, canvas, gamePadCanvas, globalConfig, window.localStorage)
 window.addEventListener("load", function () {
     // 初始化 UI
     game.loadResource().then(function () {
         game.initializeUI()
+        // 键盘和触控输入
+        game.installInput(new KeyBoardInput()) 
+        game.installInput(new TouchInput()) 
         game.run(1)
-        document.addEventListener('keydown', function (e) {
-            if (!game.bgmReady) {
-                game.bgmReady = true
-                game.playAudioBuffer(game.audio["bgm"], 0.3, true)
-            }
-            game.control(e.code, 'down')
-        })
-        document.addEventListener('keyup', function (e) {
-            game.control(e.code, 'up')
-        })
-        function onTouchStart(e) {
-            if (!game.bgmReady) {
-                game.bgmReady = true
-                game.playAudioBuffer(game.audio["bgm"], 0.3, true)
-            }
-            var touches = e.changedTouches;
-            for (let i = 0; i < touches.length; i++) {
-                let t = touches[i] 
-                game.ongoingTouches.push(t)
-                game.ongoingTouchesStart.push(t)
-                game.touchNoMove.push(true)
-                game.touchTrace.push([])
-                game.ongoingTouchesTime.push(Date.now())
-            }
-        }
-        function onTouchMove(e) {
-            var touches = e.changedTouches;
-            const radius = 22
-            for (let i = 0; i < touches.length; i++) {
-                let t = touches[i]
-                const idx = game.indexForOngoingTouch(t)
-                if (idx != null) {
-                    const yDiff = t.pageY - game.ongoingTouches[idx].pageY
-                    const xDiff = t.pageX - game.ongoingTouches[idx].pageX
-                    if (Math.abs(xDiff) <= radius && Math.abs(yDiff) <= radius) {
-                        continue
-                        /// swipe left
-                    } else if (Math.abs(xDiff) > Math.abs(yDiff) && xDiff < -radius) {
-                        game.control("TouchLeft", "down")
-                        game.ongoingTouches[idx] = t
-                        game.touchNoMove[idx] = false
-                        // swipe right
-                    } else if (Math.abs(xDiff) > Math.abs(yDiff) && xDiff > radius) {
-                        game.control("TouchRight", "down")
-                        game.ongoingTouches[idx] = t
-                        game.touchNoMove[idx] = false
-                    } else if (Math.abs(yDiff) > Math.abs(xDiff) && yDiff > radius) {
-                        game.control("TouchDown", "down")
-                        game.ongoingTouches[idx] = t
-                        game.touchNoMove[idx] = false
-                    }
-                    const now = Date.now()
-                    game.touchTrace[idx].push([now - game.ongoingTouchesTime[idx], [xDiff, yDiff]])
-                    game.ongoingTouchesTime[idx] = now
-                }
-            }
-        }
-        function onTouchEnd(e) {
-            var touches = e.changedTouches;
-            const radius = 18
-            for (let i = 0; i < touches.length; i++) {
-                let t = touches[i] 
-                const idx = game.indexForOngoingTouch(t)
-                if (idx != null) {
-                    const yDiff = t.pageY - game.ongoingTouchesStart[idx].pageY
-                    const xDiff = t.pageX - game.ongoingTouchesStart[idx].pageX
-                    if (Math.abs(xDiff) <= radius && Math.abs(yDiff) <= radius && game.touchNoMove[idx]) {
-                        game.control("TouchClockwise", "down")
-                    } else {
-                        let lastSpeed = 0
-                        let lastVec = [0, 0]
-                        let distAccu = [0, 0]
-                        let timeAccu = 0
-                        for (let i = game.touchTrace[idx].length - 1; i >= 0; i--) {
-                            distAccu[0] += game.touchTrace[idx][i][1][0]
-                            distAccu[1] += game.touchTrace[idx][i][1][1]
-                            timeAccu += game.touchTrace[idx][i][0]
-                            if (timeAccu > 0) {
-                                let s = Math.sqrt((distAccu[0] ** 2 + distAccu[1] ** 2)) / timeAccu
-                                if (s > lastSpeed) {
-                                    lastSpeed = s
-                                    lastVec[0] = distAccu[0]
-                                    lastVec[1] = distAccu[1]
-                                }
-                            }
-                        }
-                        if (lastSpeed > 1.2 && Math.abs(lastVec[1]) > Math.abs(lastVec[0]) && lastVec[1] > 1.3 * radius) {
-                            game.control("TouchDrop", 'down')
-                        } else if (lastSpeed > 1.2 && lastVec[1] < -2 * radius && 
-                                   Math.abs(lastVec[1]) > Math.abs(lastVec[0])) {
-                            game.control("TouchRegret", 'down')
-                        }
-                    }
-                    game.ongoingTouches.splice(idx)
-                    game.touchNoMove.splice(idx)
-                    game.ongoingTouchesStart.splice(idx)
-                    game.touchTrace.splice(idx)
-                    game.ongoingTouchesTime.splice(idx)
-                }
-            }
-        }
-        // 触控事件
-        document.addEventListener("touchstart", onTouchStart)
-        document.addEventListener("touchmove", onTouchMove)
-        document.addEventListener("touchend", onTouchEnd)
-        document.addEventListener("touchcancel", onTouchEnd)
     })
     window.addEventListener("resize", function() { 
         game.initializeUI()

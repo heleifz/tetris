@@ -1,7 +1,7 @@
 const path = require('path');
 
 module.exports = {
-  entry: './src/tetris.js',
+  entry: './src/game.js',
   output: {
     filename: 'main.js',
     publicPath: './dist/',

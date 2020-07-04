@@ -161,7 +161,6 @@ class BlockType {
             return [row, col, rotation] 
         }
     }
-
 }
 
 // 几种方块

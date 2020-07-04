@@ -87,28 +87,6 @@ export default class Render {
     async loadResource() {
 
         this.skin = {} 
-        // this.skin.image = await loadImage("block.png")
-        // this.skin.blockSize = 133
-        // this.skin.colorPosition = {
-        //     blue: [666, 0],
-        //     red: [1333, 399],
-        //     orange: [1463, 0],
-        //     cyan: [0, 133],
-        //     yellow: [1729, 0],
-        //     purple: [798, 532],
-        //     green: [266, 532],
-        // }
-        // this.skin.image = await loadImage("lego-1.png")
-        // this.skin.blockSize = 133
-        // this.skin.colorPosition = {
-        //     red: [0, 0],
-        //     blue: [133, 1],
-        //     yellow: [266, 0],
-        //     green: [399, 0],
-        //     cyan: [532, 1],
-        //     orange: [665, 0],
-        //     purple: [797, 0]
-        // }
         this.skin.image = await loadImage(skinImg)
         this.skin.blockTypeNum = 7
         this.skin.colorPosition = { 
