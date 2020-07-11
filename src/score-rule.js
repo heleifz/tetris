@@ -10,7 +10,7 @@ export class DefaultScoreRule
     reset() {
         this.score = 0
         this.combo = 0
-        this.regret = 0
+        this.regretCount = 0
         this.lineCount = 0
         this.level = this.startLevel
         this.levelClearCount = 0
@@ -26,8 +26,8 @@ export class DefaultScoreRule
     }
 
     regret() {
-        if (this.regret > 0) {
-            this.regret -= 1
+        if (this.regretCount > 0) {
+            this.regretCount -= 1
             return true
         } else {
             return false
@@ -43,7 +43,7 @@ export class DefaultScoreRule
     }
 
     onLock(tspin) {
-        if (tspin != null) {
+        if (tspin) {
             this.score += 400 * this.level
         }
         this.combo = 0
@@ -72,8 +72,8 @@ export class DefaultScoreRule
         if (this.combo > 1) {
             score += this.level * (this.combo - 1) * 50
         }
-        if (clearLine) {
-            this.regret += 1
+        if (clearLine == 4) {
+            this.regretCount += 1
         }
         if (this.levelClearCount > 10) {
             this.level += 1
