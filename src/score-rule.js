@@ -2,7 +2,7 @@
 export class DefaultScoreRule
 {
     constructor(startLevel) {
-        this.startLevel = startLevel
+        this.startLevel = startLevel || 1
         this.onLevelUp = null
         this.reset()
     }

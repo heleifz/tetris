@@ -1,36 +1,22 @@
 import { isTouchDevice } from "./util.js"
 
+export default new Canvas()
+
 // 管理所有canvas，并处理高清屏的情况
-export class Canvas
+class Canvas
 {
     constructor() {
         this.dpr = window.devicePixelRatio || 1
         this.uiCanvas = document.getElementById("ui")
         this.spriteCanvas = document.getElementById("game")
         this.animationCanvas = document.getElementById("animation");
-        this.virutalCanvas = document.createElement('canvas')
+        this.ui = this.uiCanvas.getContext('2d')
+        this.sprite = this.spriteCanvas.getContext('2d')
+        this.animation = this.animationCanvas.getContext('2d')
     }
 
-    getUiContext() {
-        return this.uiCanvas.getContext('2d')
-    }
-
-    getSpriteContext() {
-        return this.spriteCanvas.getContext('2d')
-    }
-
-    getAnimationContext() {
-        return this.animationCanvas.getContext('2d')
-    }
-
-    getVirtualCanvas() {
-        return this.virutalCanvas
-    }
-
-    getViewPort() {
+    refreshViewPort() {
         this.setUpAllCanvas()
-        const canvasWidth = window.innerWidth * this.dpr
-        const canvasHeight = window.innerHeight * this.dpr
         const isTouch = isTouchDevice()
         return {
             width: this.uiCanvas.width,
@@ -44,15 +30,15 @@ export class Canvas
     clearAll() {
         const w = this.spriteCanvas.width
         const h = this.spriteCanvas.height
-        this.getSpriteContext().clearRect(0, 0, w, h)
-        this.getUiContext().clearRect(0, 0, w, h)
-        this.getAnimationContext().clearRect(0, 0, w, h)
+        this.sprite.clearRect(0, 0, w, h)
+        this.ui.clearRect(0, 0, w, h)
+        this.animation.clearRect(0, 0, w, h)
     }
 
     setUpAllCanvas() {
-        this.uiCanvas = this.setUpCanvas(this.uiCanvas)
-        this.spriteCanvas = this.setUpCanvas(this.spriteCanvas)
-        this.animationCanvas = this.setUpCanvas(this.animationCanvas)
+        this.setUpCanvas(this.uiCanvas)
+        this.setUpCanvas(this.spriteCanvas)
+        this.setUpCanvas(this.animationCanvas)
     }
 
     setUpCanvas(canvas) {
@@ -60,6 +46,5 @@ export class Canvas
         let style_width = +getComputedStyle(canvas).getPropertyValue("width").slice(0, -2);
         canvas.height = style_height * this.dpr
         canvas.width = style_width * this.dpr
-        return canvas
     }
 }

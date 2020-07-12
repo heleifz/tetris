@@ -1,17 +1,16 @@
 import { TitleBar } from "./title-bar.js"
+import canvas from "../canvas.js"
 
 export class Panel
 {
-    constructor(x, y, width, height, titleHeight, title, content, uiContext, textContext) {
-        this.titleBar = new TitleBar(x, y, width, titleHeight, title, uiContext, textContext)
+    constructor(x, y, width, height, titleHeight, title, content) {
+        this.titleBar = new TitleBar(x, y, width, titleHeight, title)
         this.content = content
-        this.uiContext = uiContext
-        this.textContext = textContext
         this.relocate(x, y, width, height, titleHeight)
     } 
 
     setContent(content) {
-        if (content == this.content) {
+        if (content === this.content) {
             return
         }
         this.content = content
@@ -32,29 +31,31 @@ export class Panel
     draw() {
         this.titleBar.draw()
         if (this.uiDirty) {
-            this.uiContext.clearRect(this.x, this.y + this.titleHeight, 
+            let ctx = canvas.ui
+            ctx.clearRect(this.x, this.y + this.titleHeight, 
                 this.width, this.height - this.titleHeight)
-            this.uiContext.save()
-            this.uiContext.fillStyle = 'rgb(0,0,0,0.6)'
-            this.uiContext.fillRect(this.x,  this.y + this.titleHeight, this.width, 
+            ctx.save()
+            ctx.fillStyle = 'rgb(0,0,0,0.6)'
+            ctx.fillRect(this.x,  this.y + this.titleHeight, this.width, 
                 this.height - this.titleHeight)
-            this.uiContext.restore()
+            ctx.restore()
             this.uiDirty = false
         }
         if (this.contentDirty) {
-            this.textContext.save()
-            this.textContext.fillStyle = "white"
-            this.textContext.clearRect(this.x, this.y + this.titleHeight, this.width, 
+            let ctx = canvas.sprite
+            ctx.save()
+            ctx.fillStyle = "white"
+            ctx.clearRect(this.x, this.y + this.titleHeight, this.width, 
                 this.height - this.titleHeight)
-            this.textContext.font = this.calculateFontSize(this.content) + "px ka1";
-            this.textContext.fillText(this.content, this.x + 2, this.y + 2 * this.titleHeight)
+            ctx.font = this.calculateFontSize(this.content) + "px ka1";
+            ctx.fillText(this.content, this.x + 2, this.y + 2 * this.titleHeight)
             this.contentDirty = false
-            this.textContext.restore()
+            ctx.restore()
         }
     }
 
     calculateFontSize(text) {
-        const ctx = this.textContext
+        const ctx = canvas.sprite
         let fontSize = this.titleHeight - 3
         while (fontSize > 3){
             ctx.font = fontSize + "px ka1";

@@ -1,9 +1,9 @@
 import { constants } from "../constants.js"
+import canvas from "../canvas.js"
 
 export class Board
 {
-    constructor(x, y, width, height, blockSize, context) {
-        this.context = context
+    constructor(x, y, width, height, blockSize) {
         this.relocate(x, y, width, height, blockSize)
     } 
 
@@ -18,7 +18,7 @@ export class Board
 
     draw() {
         if (this.dirty) {
-            const ctx = this.context
+            const ctx = canvas.ui
             ctx.save()
             ctx.fillStyle = 'rgb(0,0,0,0.8)'
             ctx.fillRect(this.x, this.y, this.width, this.height)

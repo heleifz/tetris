@@ -1,26 +1,14 @@
 import { boundingBox } from "../util.js"
 import { Panel } from "./panel.js"
+import resource from "../resource/resource.js"
+import canvas from "../canvas.js"
 
 export class BlockPanel
 {
-    constructor(x, y, width, height, titleHeight, title, blocks, 
-                blockImage, imageBlockSize, uiContext, spriteContext) {
-        this.colorPosition = { 
-            red: 0, 
-            blue: 1,
-            yellow: 2,
-            green: 3,
-            cyan: 4,
-            orange: 5,
-            purple: 6,
-            gray: 7
-        }
-        this.panel = new Panel(x, y, width, height, titleHeight, 
-                               title, "", uiContext, spriteContext)
+    constructor(x, y, width, height, titleHeight, title, blocks) {
+        this.panel = new Panel(x, y, width, height, titleHeight, title, "")
         this.title = title
-        this.uiContext = uiContext
-        this.spriteContext = spriteContext
-        this.relocate(x, y, width, height, titleHeight, blockImage, imageBlockSize)
+        this.relocate(x, y, width, height, titleHeight)
         this.setBlocks(blocks)
     } 
     
@@ -30,7 +18,6 @@ export class BlockPanel
             changed = true
         } else {
             for (let i = 0; i < this.blocks.length; i++) {
-                console.log(blocks[i], this.blocks[i])
                 if (blocks[i] != this.blocks[i]) {
                     changed = true
                     break
@@ -46,26 +33,24 @@ export class BlockPanel
         }
     }
 
-    relocate(x, y, width, height, titleHeight, blockImage, imageBlockSize) {
+    relocate(x, y, width, height, titleHeight) {
         this.panel.relocate(x, y, width, height, titleHeight)
         this.x = x
         this.y = y
         this.width = width
         this.height = height
         this.titleHeight = titleHeight
-        this.blockImage = blockImage
-        this.imageBlockSize = imageBlockSize
         this.blockDirty = true
     }
 
     draw() {
         this.panel.draw()
         if (this.blockDirty) {
-            this.spriteContext.save()
-            this.spriteContext.clearRect(this.x, this.y + this.titleHeight, this.width, this.height - this.titleHeight)
+            canvas.sprite.save()
+            canvas.sprite.clearRect(this.x, this.y + this.titleHeight, this.width, this.height - this.titleHeight)
             this.drawBlocks()
             this.blockDirty = false
-            this.spriteContext.restore()
+            canvas.sprite.restore()
         }
     }
 
@@ -86,17 +71,12 @@ export class BlockPanel
             const height = (maxRow - minRow + 1) * blockSize
             const xOffSet = Math.round((this.width - width) / 2)
             const yOffSet = Math.round((windowHeight - height) / 2)
-
-            const offset = this.colorPosition[block.style]
-
             const originX = this.x
             const originY = this.y + this.titleHeight + i * windowHeight
-
             for (let i = 0; i < positions.length; ++i) {
                 let x = (positions[i][1] - minCol) * blockSize + originX + xOffSet
                 let y = (positions[i][0] - minRow) * blockSize + originY + yOffSet
-                this.spriteContext.drawImage(this.blockImage, offset * this.imageBlockSize, 0,
-                                             this.imageBlockSize, this.imageBlockSize, x, y, blockSize, blockSize)
+                resource.image.drawBlock(canvas.sprite, x, y, blockSize, block.style, 1)
             }
         }
     }

@@ -1,12 +1,12 @@
-import rotateSound from "./assets/sound/rotate.wav"
-import moveSound from "./assets/sound/move.wav"
-import dropSound from "./assets/sound/drop.wav"
-import clearSound from "./assets/sound/clear.wav"
-import bgmSound from "./assets/sound/bgm.mp3"
+import rotateSound from "../assets/sound/rotate.wav"
+import moveSound from "../assets/sound/move.wav"
+import dropSound from "../assets/sound/drop.wav"
+import clearSound from "../assets/sound/clear.wav"
+import bgmSound from "../assets/sound/bgm.mp3"
 
-export class DefaultGameSound
+export class GameSound
 {
-    async loadResource() {
+    async load() {
         window.AudioContext = window.AudioContext || window.webkitAudioContext
         this.audioContext = new AudioContext()
         this.bgmReady = false

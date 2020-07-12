@@ -1,8 +1,8 @@
+import canvas from "../canvas.js"
+
 export class TitleBar
 {
-	constructor(x, y, width, height, title, uiContext, textContext) {
-		this.uiContext = uiContext
-		this.textContext = textContext
+	constructor(x, y, width, height, title) {
 		this.title = title
 		this.relocate(x, y, width, height)
 	}
@@ -18,20 +18,22 @@ export class TitleBar
 
 	draw() {
         if (this.uiDirty) {
-            this.uiContext.clearRect(this.x, this.y, this.width, this.height)
-            this.uiContext.save()
-            this.uiContext.fillStyle = 'rgb(0,0,0,0.85)'
-            this.uiContext.fillRect(this.x, this.y, this.width, this.height)
-            this.uiContext.restore()
+			let ctx = canvas.ui
+            ctx.clearRect(this.x, this.y, this.width, this.height)
+            ctx.save()
+            ctx.fillStyle = 'rgb(0,0,0,0.85)'
+            ctx.fillRect(this.x, this.y, this.width, this.height)
+            ctx.restore()
             this.uiDirty = false
 		}
 		if (this.textDirty) {
-            this.textContext.save()
-            this.textContext.clearRect(this.x, this.y, this.width, this.height)
-            this.textContext.fillStyle = "white"
-			this.textContext.font = (this.height + 1) + "px pixeboy";
-			this.textContext.fillText(this.title, this.x, this.y + this.height);
-            this.textContext.restore()
+			let ctx = canvas.sprite
+            ctx.save()
+            ctx.clearRect(this.x, this.y, this.width, this.height)
+            ctx.fillStyle = "white"
+			ctx.font = (this.height + 1) + "px pixeboy";
+			ctx.fillText(this.title, this.x, this.y + this.height);
+            ctx.restore()
 			this.textDirty = false
 		}
 	}

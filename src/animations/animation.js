@@ -1,99 +1,12 @@
 import {boundingBox} from "./util.js"
 
-export function clearLineAnimation(lines) {
-    let toClear = lines
-    let progress = 1
-    let totalLength = 18
-    const firstPhase = Math.round(totalLength * 0.4)
-    const secondPhase = totalLength - firstPhase
-    return function (game) {
-        const particleSize = Math.round(game.render.height * 0.015)
-        let particleNum = 8
-        const ctx = game.render.getAnimationContext()
-        if (lines.length > 10) {
-            particleNum = 0
-        }
-        if (progress < totalLength) {
-            for (let i in lines) {
-                const row = lines[i]
-                let x = game.render.gameX
-                let y = (row - 2) * game.render.blockSizeInPixels + game.render.gameY
-                let height = game.render.blockSizeInPixels
-                let width = game.render.gameWidth
-                // 第一阶段：变亮
-                if (progress <= firstPhase) {
-                    const trans = progress / firstPhase
-                    ctx.fillStyle = "rgba(255,255,255," + trans + ")";
-                // 第二阶段：化作彩色粒子飞散消失
-                } else {
-                    if (progress == firstPhase + 1) {
-                        for (let j = 0;  j < game.stack[row].length; ++j) {
-                            game.stack[row][j] = null
-                        }
-                    }
-                    const trans = 1.0 - ((progress - firstPhase) / secondPhase)
-                    ctx.fillStyle = "rgba(255,255,255," + trans + ")";
-                    width = width * (1.0 - (progress - firstPhase) / secondPhase)
-                    x = x + (game.render.gameWidth - width) / 2
-                    for (let i = 0; i < particleNum; ++i) {
-                        let particle = createParticle(randomColorBlockParticle(particleSize, game.render), 
-                            x, y + game.render.blockSizeInPixels / 2, (90 + (135 - 90) * Math.random()), 10 + 5 * Math.random(), 30, 20, 40)
-                        game.animations.push(particle)
-                        particle = createParticle(randomColorBlockParticle(particleSize, game.render), 
-                            x + width, y + game.render.blockSizeInPixels / 2, 45 + (90 - 45) * Math.random(), 10 + 5 * Math.random(), 30, 20, 40)
-                        game.animations.push(particle)
-                    }
-                }
-                ctx.fillRect(x, y, width, height)
-            }
-            progress += 1
-        } else if (progress == totalLength) {
-            if (game.afterPause !== null) {
-                game.afterPause()
-                game.afterPause = null
-            }
-            return null
-        }
-    }
-}
-
-export function highlightAnimation(positions) {
-    let progress = 1
-
-    return function (game) {
-        if (progress < 16) {
-            const ctx = game.render.getAnimationContext()
-            ctx.save()
-            for (let i in positions) {
-                const p = positions[i]
-                let x = p[1] * game.render.blockSizeInPixels + game.render.gameX
-                let y = (p[0] - 2) * game.render.blockSizeInPixels + game.render.gameY
-                if (progress <= 8) {
-                    const trans = 0.8 * (progress / 8)
-                    ctx.fillStyle = "rgba(255,255,255," + trans + ")";
-                } else {
-                    const trans = 0.8 - 0.8 * ((progress - 8) / 7.0)
-                    ctx.fillStyle = "rgba(255,255,255," + trans + ")";
-                }
-                ctx.fillRect(x, y, game.render.blockSizeInPixels, game.render.blockSizeInPixels)
-            }
-            ctx.restore()
-            progress += 1
-        } else {
-            return null
-        }
-    }
-}
 
 export function hardDropAnimation(positions, render) {
     let progress = 1 
-
     let [minRow, maxRow, minCol, maxCol] = boundingBox(positions)
-
     const minX = render.gameX + minCol * render.blockSizeInPixels
     const maxX = render.gameX + (maxCol + 1) * render.blockSizeInPixels
     const endY = render.gameY + (minRow - 2) * render.blockSizeInPixels - 5
-
     let dropLines = []
     const lineHeight = 100
     if (minRow > 5) {

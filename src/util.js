@@ -1,13 +1,3 @@
-export function loadImage(path) {
-    return new Promise(function (resolve) {
-        const img = new Image()
-        img.src = path
-        img.onload = function () {
-            resolve(img)
-        }
-    });
-}
-
 export function boundingBox(positions) {
     let minRow = null
     let maxRow = null
