@@ -22,6 +22,10 @@ export function boundingBox(positions) {
     return [minRow, maxRow, minCol, maxCol]
 }
 
+export function deepCopy(o) {
+    return JSON.parse(JSON.stringify(o))
+}
+
 export function formatDate(date) {
     var hours = date.getHours()
     var minutes = date.getMinutes()

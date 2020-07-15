@@ -3,8 +3,6 @@
 import resource from "./resource/resource.js"
 import canvas from './canvas.js'
 
-import { formatDate } from "./util.js"
-
 import { ClearLineAnimation } from "./animations/clear-line.js"
 import { ComposeAnimation } from "./animations/compose.js"
 
@@ -23,7 +21,6 @@ class Game {
 
     constructor() {
         this.inputs = []
-        this.storage = window.localStorage
         this.sprites = []
         this.animation = new AnimationManager()
         this.tetris = new Tetris((lockPositions, lines, isPerfect, tspin) => { 
@@ -55,32 +52,6 @@ class Game {
             that.control(action) 
         })
         this.inputs.push(inputMethod)
-    }
-
-    getScoreRank() {
-        let scores = this.storage.getItem("score_rank")
-        if (scores == null) {
-            return []
-        }
-        return JSON.parse(scores)
-    }
-
-    addToScoreRank(score, useTime, clearLine) {
-        let rank = this.getScoreRank()
-        let playedAt = formatDate(new Date())
-        rank.push({
-            score: score, 
-            useTime: useTime,
-            clearLine: clearLine,
-            playedAt: playedAt
-        })
-        // 按 score 排序取前 10
-        rank.sort((a,b) => (a.score > b.score || (a.score == b.score && a.playedAt > b.playedAt)) ? -1 : 
-                            ((b.score > a.score || (a.score == b.score && b.playedAt > a.playedAt)) ? 1 : 0))
-        if (rank.length > 10) {
-            rank = rank.slice(0, 10)
-        }
-        this.storage.setItem("score_rank", JSON.stringify(rank))
     }
 
     relocateSprites() {
@@ -173,12 +144,12 @@ class Game {
         this.blockField.setBlockField(t.getBlockPositions(),
                                       t.getPredictedPositions(), 
                                       t.getBlockStyle(), t.getStack())
-        this.scorePanel.setContent(t.scoreRule.score)
-        this.clearLinePanel.setContent(t.scoreRule.lineCount)
+        this.scorePanel.setContent(t.getScore())
+        this.clearLinePanel.setContent(t.getLineCount())
         this.timePanel.setContent(t.getUsedTime())
-        this.regretPanel.setContent(t.scoreRule.regretCount)
-        this.previewPanel.setBlocks(t.nextBlocks)
-        this.holdPanel.setBlocks(t.hold == null ? [] : [t.hold])
+        this.regretPanel.setContent(t.getRegretCount())
+        this.previewPanel.setBlocks(t.getNextBlocks())
+        this.holdPanel.setBlocks(t.getHold())
     }
 
     run() {
@@ -198,7 +169,7 @@ class Game {
             left: 1, right: 1, down: 1, clockwise: 1, counter_clockwise: 1,
             hard_drop: 1, hold: 1, regret: 1
         }
-        resource.sound.playBgmAtFirstTime(this.tetris.scoreRule.level)
+        resource.sound.playBgmAtFirstTime(1)
         if ((action in validAction)) {
             this.tetris.control(action)
         }

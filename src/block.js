@@ -2,7 +2,7 @@ class BlockType {
 
     // shapes：在 bounding box 中的四种旋转形态
     // kickRule: kick规则
-    // style: 在皮肤中的贴图名称
+    // style: 色彩名称
     constructor(shapes, kickRule, style) {
 
         this.shapes = shapes

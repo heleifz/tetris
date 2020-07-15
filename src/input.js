@@ -45,7 +45,8 @@ export class KeyBoardInput
             ArrowDown: "down",
             ArrowUp: "clockwise",
             Space: "hard_drop",
-            MetaLeft: "hold"
+            MetaLeft: "hold",
+            KeyX: "regret"
         }
         let that = this
         document.addEventListener('keydown', (e) => {

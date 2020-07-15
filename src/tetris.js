@@ -1,7 +1,6 @@
 import { constants } from "./constants.js"
-import { DefaultScoreRule } from "./score-rule.js"
 import {JBlock, ZBlock, LBlock, IBlock, OBlock, TBlock, SBlock} from "./block.js"
-import { msToTime, shuffle } from "./util.js"
+import { msToTime, shuffle, formatDate, deepCopy } from "./util.js"
 
 // 游戏核心逻辑, 在每轮下坠结束后暂停，等待用户下一次触发
 export class Tetris
@@ -11,10 +10,11 @@ export class Tetris
         this.rows = constants.rows + constants.hiddenRows
         this.cols = constants.cols
         this.candidates = [JBlock, ZBlock, LBlock, IBlock, OBlock, TBlock, SBlock]
-        this.scoreRule = new DefaultScoreRule(1)
+        this.startLevel = 1
         this.onLockBlock = onLockBlock || (() => {})
         this.onGameOver = onGameOver || (() => {})
         this.onHarddrop = onHarddrop || (() => {})
+        this.storage = window.localStorage
         this.reset()
     }
 
@@ -44,9 +44,55 @@ export class Tetris
 
         this.beginTime = null
         this.endTime = null
-        this.scoreRule.reset()
 
         this.randomBlocks = []
+        this.history = []
+
+        // 各项分数
+        this.score = 0
+        this.combo = 0
+        this.regretCount = 5
+        this.lineCount = 0
+        this.level = this.startLevel
+        this.levelClearCount = 0
+    }
+
+    // 支持悔棋功能，每一轮下坠时创建一个当前状态的 snapshot，悔棋只要将历史 snapshot 覆盖当前状态即可
+    addSnapshot() {
+        let snapshot = {
+            stack: deepCopy(this.stack),
+            block: this.block,
+            blockRow: this.blockRow,
+            blockCol: this.blockCol,
+            tspin: this.tspin,
+            rotation: this.rotation,
+            nextBlocks: this.nextBlocks.slice(),
+            hold: this.hold,
+            holdTime: this.holdTime,
+            randomBlocks: this.randomBlocks.slice(),
+            score: this.score,
+            combo: this.combo,
+            lineCount: this.lineCount,
+            level: this.level,
+            levelClearCount: this.levelClearCount
+        }
+        this.history.push(snapshot)
+        if (this.history.length > 10) {
+            this.history.shift()
+        }
+    }
+
+    rewind() {
+        if (this.history.length == 0) {
+            return false
+        }
+        let snapshot = this.history.pop()
+        for (let k in snapshot) {
+            this[k] = snapshot[k]
+        }
+        this.resetDelayTimer()
+        this.resetFallTimer()
+        return true
     }
 
     restart() {
@@ -55,6 +101,26 @@ export class Tetris
         this.endTime = null
         this.nextBlocks = [this.pickBlock(), this.pickBlock(), this.pickBlock()]
         this.triggerNextDrop()
+    }
+
+    getScore() {
+        return this.score
+    }
+
+    getHold() {
+        return this.hold === null ? [] : [this.hold]
+    }
+
+    getNextBlocks() {
+        return this.nextBlocks
+    }
+
+    getLineCount() {
+        return this.lineCount
+    }
+
+    getRegretCount() {
+        return this.regretCount
     }
 
     getUsedTime() {
@@ -85,6 +151,8 @@ export class Tetris
             this.endTime = Date.now()
             this.stopFallTimer()
             this.onGameOver()
+        } else {
+            this.addSnapshot()
         }
     }
 
@@ -190,7 +258,7 @@ export class Tetris
         const lines = this.fullLines
         const isPerfect = this.isPerfect
         const tspin = this.tspin
-        this.scoreRule.onClearLine(lines.length, isPerfect, tspin)
+        this.updateClearLineScore(lines.length, isPerfect, tspin)
         lines.sort()
         for (let i = lines.length - 1; i >= 0; i--) {
             this.stack.splice(lines[i], 1)
@@ -210,10 +278,15 @@ export class Tetris
     stopFallTimer() {
         clearTimeout(this.fallTimerId)
     }
+
+    dropSpeed() {
+        const levelTime = Math.pow(0.8 - ((this.level - 1) * 0.007), this.level - 1)
+        return levelTime * 1000
+    }
     
     resetFallTimer() {
         this.stopFallTimer()
-        const speed = this.scoreRule.dropSpeed()
+        const speed = this.dropSpeed()
         const that = this;
         this.fallTimerId = setTimeout(function () {
             that.control("fall")
@@ -297,7 +370,7 @@ export class Tetris
             if (moveResult.moveType != 'stuck') {
                 this.resetDelayTimer()
             }
-            this.scoreRule.onDrop(moveResult.dropStep, dropType)
+            this.updateDropScore(moveResult.dropStep, dropType)
             if (action == "hard_drop") {
                 this.onHarddrop(this.getBlockPositions())
                 this.lockBlock()
@@ -321,12 +394,93 @@ export class Tetris
                 console.log("cannot hold two times")
             }
         } else if (this.state == "dropping" && action == 'regret') {
-            if (this.scoreRule.regret()) {
-                this.spawnNewBlock(this.block)
-                this.resetDelayTimer()
-            } else {
+            if (!this.regret()) {
                 console.log("cannot regret")
             }
         } 
     }
+    
+    regret() {
+        if (this.regretCount > 0) {
+            if (this.rewind()) {
+                this.regretCount -= 1
+                return true
+            } else {
+                return false
+            }
+        } else {
+            return false
+        }
+    }
+
+    updateDropScore(dropCell, type) {
+        if (type == 'soft') {
+            this.score += dropCell
+        } else if (type == 'hard') {
+            this.score += 2 * dropCell
+        }
+    }
+
+    updateClearLineScore(clearLine, isPerfect, tspin) {
+        if (clearLine == 0) {
+            this.combo = 0
+            if (tspin) {
+                this.score += 400 * this.level
+            }
+            return
+        }
+        this.combo += 1
+        this.lineCount += clearLine
+        this.levelClearCount += clearLine
+        let base = [null, 100, 300, 500, 800] 
+        let tspinBase = [null, 800, 1200, 1600, null] 
+        let perfect = [null, 800, 1000, 1800, 200]
+        let score = 0
+        if (tspin) {
+            score = tspinBase[clearLine] 
+        } else {
+            score = base[clearLine] 
+        }
+        if (isPerfect) {
+            score += perfect[clearLine]
+        }
+        score *= this.level
+        if (this.combo > 1) {
+            score += this.level * (this.combo - 1) * 50
+        }
+        if (clearLine == 4) {
+            this.regretCount += 1
+        }
+        if (this.levelClearCount > 10) {
+            this.level += 1
+            this.levelClearCount -= 10
+        }
+    }
+
+    getScoreRank() {
+        let scores = this.storage.getItem("score_rank")
+        if (scores == null) {
+            return []
+        }
+        return JSON.parse(scores)
+    }
+
+    addToScoreRank(score, useTime, clearLine) {
+        let rank = this.getScoreRank()
+        let playedAt = formatDate(new Date())
+        rank.push({
+            score: score, 
+            useTime: useTime,
+            clearLine: clearLine,
+            playedAt: playedAt
+        })
+        // 按 score 排序取前 10
+        rank.sort((a,b) => (a.score > b.score || (a.score == b.score && a.playedAt > b.playedAt)) ? -1 : 
+                            ((b.score > a.score || (a.score == b.score && b.playedAt > a.playedAt)) ? 1 : 0))
+        if (rank.length > 10) {
+            rank = rank.slice(0, 10)
+        }
+        this.storage.setItem("score_rank", JSON.stringify(rank))
+    }
+
 }
