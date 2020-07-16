@@ -20,10 +20,10 @@ export class Board
         if (this.dirty) {
             const ctx = canvas.ui
             ctx.save()
-            ctx.fillStyle = 'rgb(0,0,0,0.8)'
+            ctx.fillStyle = 'rgb(0,0,0,1.0)'
             ctx.fillRect(this.x, this.y, this.width, this.height)
             // 画网格
-            ctx.strokeStyle = 'rgb(60,60,60)'
+            ctx.strokeStyle = 'rgb(30,30,30)'
             ctx.lineWidth = 2
             ctx.beginPath()
             for (let i = 1; i < constants.cols; ++i) {

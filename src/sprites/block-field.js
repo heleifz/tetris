@@ -27,7 +27,7 @@ export class BlockField
     setBlockField(blockPositions, predictedPositions, blockStyle, stack) {
         this.newState = this.createEmptyField()
         for (let p of predictedPositions) {
-            this.newState[p[0]][p[1]] = [blockStyle, 0.3]
+            this.newState[p[0]][p[1]] = [blockStyle, 0.2]
         }
         for (let p of blockPositions) {
             this.newState[p[0]][p[1]] = [blockStyle, 1]

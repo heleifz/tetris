@@ -16,6 +16,7 @@ import { BlockPanel } from './sprites/block-panel.js'
 import { AnimationManager } from "./animations/animation-manager.js"
 import { Tetris } from "./tetris.js"
 import { HighLightAnimation } from "./animations/highlight.js"
+import { HardDropAnimation } from "./animations/hard-drop.js"
 
 class Game {
 
@@ -25,7 +26,7 @@ class Game {
         this.animation = new AnimationManager()
         this.tetris = new Tetris((lockPositions, lines, isPerfect, tspin) => { 
             let animationGroup = lines.map(this.createClearLineAnimation.bind(this))
-            this.animation.add(new HighLightAnimation(this.gameX, this.gameY, this.blockSize, lockPositions, 16))
+            this.animation.add(new HighLightAnimation(this.gameX, this.gameY, this.blockSize, lockPositions, 25))
             this.animation.add(new ComposeAnimation(animationGroup, () => {
                 // 特殊处理：清空动画播放后，这一行需要重新绘制
                 this.blockField.setRedrawLines(lines)
@@ -35,6 +36,9 @@ class Game {
         }, 
         () => { 
             console.log("gameover") 
+        }, (lockPositions) => {
+            this.animation.add(new HardDropAnimation(this.gameX, this.gameY, 
+                this.blockSize, lockPositions, 40))
         })
     }
 
@@ -43,7 +47,7 @@ class Game {
         const y = this.gameY + (l - constants.hiddenRows) * this.blockSize
         const width = this.gameWidth
         const height = this.blockSize
-        return new ClearLineAnimation(x, y, width, height, 18)
+        return new ClearLineAnimation(x, y, width, height, 26)
     }
 
     installInput(inputMethod) {
