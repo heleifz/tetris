@@ -48,8 +48,17 @@ export class HardDropAnimation
                 y + (minRow - constants.hiddenRows) * blockSize]
     }
 
+    setManager(m) {
+        this.manager = m
+    }
+
     finished() {
         return this.isFinished
+    }
+
+    clear() {
+        const ctx = canvas.animation
+        ctx.clearRect(this.clearBox[0], this.clearBox[1], this.clearBox[2], this.clearBox[3])
     }
 
     play() {
@@ -58,14 +67,13 @@ export class HardDropAnimation
             if (!this.isFinished) {
                 this.isFinished = true
                 if (this.onFinish) {
-                    ctx.clearRect(this.clearBox[0], this.clearBox[1], this.clearBox[2], this.clearBox[3])
+                    this.clear()
                     this.onFinish()
                 }
             }
             return
         }
         ctx.save()
-        ctx.clearRect(this.clearBox[0], this.clearBox[1], this.clearBox[2], this.clearBox[3])
         for (let b of this.boundary[0]) {
             const lineHeight = Math.round(this.blockSize * 6)
             let gradient = ctx.createLinearGradient(b[1], this.boundary[4] + Math.round(this.blockSize * 1.2), 

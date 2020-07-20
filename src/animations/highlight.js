@@ -21,6 +21,19 @@ export class HighLightAnimation
         return this.isFinished
     }
 
+    setManager(m) {
+        this.manager = m
+    }
+
+    clear() {
+        const ctx = canvas.animation
+        for (let p of this.positions) {
+            let x = p[1] * this.blockSize + this.x
+            let y = (p[0] - constants.hiddenRows) * this.blockSize + this.y
+            ctx.clearRect(x, y, this.blockSize, this.blockSize)
+        }
+    }
+
     play() {
         if (this.progress > this.duration) {
             if (!this.isFinished) {
@@ -43,7 +56,6 @@ export class HighLightAnimation
                 const trans = 0.8 - 0.8 * ((this.progress - this.firstPhase) / (this.duration - this.firstPhase))
                 ctx.fillStyle = "rgba(255,255,255," + trans + ")";
             }
-            ctx.clearRect(x, y, this.blockSize, this.blockSize)
             ctx.fillRect(x, y, this.blockSize, this.blockSize)
         }
         ctx.restore()

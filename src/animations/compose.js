@@ -10,8 +10,20 @@ export class ComposeAnimation {
         this.isFinished = false
     }
 
+    setManager(m) {
+        for (let a of this.animations) {
+            a.setManager(m)
+        }
+    }
+
     finished() {
         return this.isFinished
+    }
+
+    clear() {
+        for (let a of this.animations) {
+            a.clear()
+        }
     }
 
     play() {

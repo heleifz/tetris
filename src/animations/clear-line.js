@@ -1,4 +1,5 @@
 import canvas from "../canvas.js"
+import { RandomColorParticle } from "./particle-system.js"
 
 // 清空一行的动画
 export class ClearLineAnimation
@@ -16,11 +17,20 @@ export class ClearLineAnimation
         this.firstPhase = Math.round(this.duration * 0.4)
         this.secondPhase = this.duration - this.firstPhase
 
-        this.particleSize = Math.round(this.height * 0.2)
+        this.particleSize = Math.round(this.height * 0.25)
+    }
+
+    setManager(m) {
+        this.manager = m
     }
 
     finished() {
         return this.isFinished
+    }
+
+    clear() {
+        const ctx = canvas.animation
+        ctx.clearRect(this.x, this.y, this.width, this.height)
     }
 
     play() {
@@ -33,15 +43,13 @@ export class ClearLineAnimation
             }
             return
         }
-        const particleNum = 8
+        const particleNum = 4
         const ctx = canvas.animation
         // 第一阶段：变亮
         if (this.progress <= this.firstPhase) {
             ctx.save()
-            ctx.clearRect(this.x, this.y, this.width, this.height)
             const trans = this.progress / this.firstPhase
             ctx.fillStyle = "rgba(255,255,255," + trans + ")";
-            ctx.fillRect(this.x, this.y, this.width, this.height)
             ctx.restore()
         // 第二阶段：化作彩色粒子飞散消失
         } else {
@@ -50,20 +58,17 @@ export class ClearLineAnimation
             }
             let ctx = canvas.animation
             ctx.save()
-            ctx.clearRect(this.x, this.y, this.width, this.height)
             const trans = 1.0 - ((this.progress - this.firstPhase) / this.secondPhase)
             ctx.fillStyle = "rgba(255,255,255," + trans + ")";
             const drawWidth = this.width * (1.0 - (this.progress - this.firstPhase) / this.secondPhase)
             const drawX = this.x + Math.round((this.width - drawWidth) / 2)
             ctx.fillRect(drawX, this.y, drawWidth, this.height)
-            // for (let i = 0; i < particleNum; ++i) {
-            //     let particle = createParticle(randomColorBlockParticle(particleSize, game.render), 
-            //         x, y + game.render.blockSizeInPixels / 2, (90 + (135 - 90) * Math.random()), 10 + 5 * Math.random(), 30, 20, 40)
-            //     game.animations.push(particle)
-            //     particle = createParticle(randomColorBlockParticle(particleSize, game.render), 
-            //         x + width, y + game.render.blockSizeInPixels / 2, 45 + (90 - 45) * Math.random(), 10 + 5 * Math.random(), 30, 20, 40)
-            //     game.animations.push(particle)
-            // }
+            for (let i = 0; i < particleNum; ++i) {
+                this.manager.particles.add(new RandomColorParticle(this.particleSize), 
+                    drawX, this.y + Math.round(this.height / 2), (90 + (135 - 90) * Math.random()), 10 + 5 * Math.random(), 20, 35)
+                this.manager.particles.add(new RandomColorParticle(this.particleSize), 
+                    drawX + drawWidth, this.y + Math.round(this.height / 2), 45 + (90 - 45) * Math.random(), 10 + 5 * Math.random(), 20, 35)
+            }
             ctx.restore()
         }
         this.progress += 1
