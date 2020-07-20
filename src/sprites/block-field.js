@@ -56,6 +56,21 @@ export class BlockField
         }
     }
 
+    clear() {
+        for (let i = 0; i < this.rows; i++) {
+            for (let j = 0; j < this.cols; j++) {
+                const s0 = this.lastState[i][j]
+                const s1 = this.newState[i][j]
+                if (s0 == null && s1 == null || 
+                    (s0 != null && s1 != null && s0[0] == s1[0] && s0[1] == s1[1])) 
+                {
+                } else {
+                    this.clearBlock(i, j)
+                }
+            }
+        }
+    }
+
     draw() {
         for (let i = 0; i < this.rows; i++) {
             for (let j = 0; j < this.cols; j++) {
@@ -66,7 +81,6 @@ export class BlockField
                     (s0 != null && s1 != null && s0[0] == s1[0] && s0[1] == s1[1])) 
                 {  // do nothing
                 } else {
-                    this.clearBlock(i, j)
                     if (s1 != null) {
                         this.drawBlock(i, j, s1[0], s1[1])
                     }

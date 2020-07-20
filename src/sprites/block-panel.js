@@ -43,11 +43,17 @@ export class BlockPanel
         this.blockDirty = true
     }
 
+    clear() {
+        this.panel.clear()
+        if (this.blockDirty) {
+            canvas.sprite.clearRect(this.x, this.y + this.titleHeight, this.width, this.height - this.titleHeight)
+        }
+    }
+
     draw() {
         this.panel.draw()
         if (this.blockDirty) {
             canvas.sprite.save()
-            canvas.sprite.clearRect(this.x, this.y + this.titleHeight, this.width, this.height - this.titleHeight)
             this.drawBlocks()
             this.blockDirty = false
             canvas.sprite.restore()

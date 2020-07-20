@@ -28,12 +28,24 @@ export class Panel
         this.titleBar.relocate(x, y, width, titleHeight)
     }
 
-    draw() {
-        this.titleBar.draw()
+    clear() {
+        this.titleBar.clear()
         if (this.uiDirty) {
             let ctx = canvas.ui
             ctx.clearRect(this.x, this.y + this.titleHeight, 
                 this.width, this.height - this.titleHeight)
+        }
+        if (this.contentDirty) {
+            let ctx = canvas.sprite
+            ctx.clearRect(this.x, this.y + this.titleHeight, this.width, 
+                this.height - this.titleHeight)
+        }
+    }
+
+    draw() {
+        this.titleBar.draw()
+        if (this.uiDirty) {
+            let ctx = canvas.ui
             ctx.save()
             ctx.fillStyle = 'rgb(0,0,0,0.6)'
             ctx.fillRect(this.x,  this.y + this.titleHeight, this.width, 
@@ -45,8 +57,6 @@ export class Panel
             let ctx = canvas.sprite
             ctx.save()
             ctx.fillStyle = "white"
-            ctx.clearRect(this.x, this.y + this.titleHeight, this.width, 
-                this.height - this.titleHeight)
             ctx.font = this.calculateFontSize(this.content) + "px ka1";
             ctx.fillText(this.content, this.x + 2, this.y + 2 * this.titleHeight)
             this.contentDirty = false

@@ -16,10 +16,20 @@ export class TitleBar
 		this.uiDirty = true
 	}
 
-	draw() {
+	clear() {
         if (this.uiDirty) {
 			let ctx = canvas.ui
             ctx.clearRect(this.x, this.y, this.width, this.height)
+		}
+		if (this.textDirty) {
+			let ctx = canvas.sprite
+            ctx.clearRect(this.x, this.y, this.width, this.height)
+		}
+	}
+
+	draw() {
+        if (this.uiDirty) {
+			let ctx = canvas.ui
             ctx.save()
             ctx.fillStyle = 'rgb(0,0,0,0.85)'
             ctx.fillRect(this.x, this.y, this.width, this.height)
@@ -29,7 +39,6 @@ export class TitleBar
 		if (this.textDirty) {
 			let ctx = canvas.sprite
             ctx.save()
-            ctx.clearRect(this.x, this.y, this.width, this.height)
             ctx.fillStyle = "white"
 			ctx.font = (this.height + 1) + "px pixeboy";
 			ctx.fillText(this.title, this.x, this.y + this.height);

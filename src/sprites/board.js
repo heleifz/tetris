@@ -16,6 +16,13 @@ export class Board
         this.dirty = true
     }
 
+    clear() {
+        if (this.dirty) {
+            const ctx = canvas.ui
+            ctx.fillRect(this.x, this.y, this.width, this.height)
+        }
+    }
+
     draw() {
         if (this.dirty) {
             const ctx = canvas.ui

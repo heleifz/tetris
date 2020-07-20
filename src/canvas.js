@@ -15,8 +15,10 @@ class Canvas
         this.animation = this.animationCanvas.getContext('2d')
     }
 
-    refreshViewPort() {
-        this.setUpAllCanvas()
+    refreshViewPort(setupCanvas) {
+        if (setupCanvas) {
+            this.setUpAllCanvas()
+        }
         const isTouch = isTouchDevice()
         return {
             width: this.uiCanvas.width,
