@@ -12,7 +12,6 @@ class Resource
     }
 
     load() {
-        console.log(this.sound, this.image)
         return Promise.all([this.sound.load(), this.image.load()])
     }
 }

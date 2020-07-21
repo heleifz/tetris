@@ -10,9 +10,11 @@ class Canvas
         this.uiCanvas = document.getElementById("ui")
         this.spriteCanvas = document.getElementById("game")
         this.animationCanvas = document.getElementById("animation");
+        this.overlayCanvas = document.getElementById("overlay");
         this.ui = this.uiCanvas.getContext('2d')
         this.sprite = this.spriteCanvas.getContext('2d')
         this.animation = this.animationCanvas.getContext('2d')
+        this.overlay = this.overlayCanvas.getContext('2d')
     }
 
     refreshViewPort(setupCanvas) {
@@ -35,12 +37,14 @@ class Canvas
         this.sprite.clearRect(0, 0, w, h)
         this.ui.clearRect(0, 0, w, h)
         this.animation.clearRect(0, 0, w, h)
+        this.overlay.clearRect(0, 0, w, h)
     }
 
     setUpAllCanvas() {
         this.setUpCanvas(this.uiCanvas)
         this.setUpCanvas(this.spriteCanvas)
         this.setUpCanvas(this.animationCanvas)
+        this.setUpCanvas(this.overlayCanvas)
     }
 
     setUpCanvas(canvas) {

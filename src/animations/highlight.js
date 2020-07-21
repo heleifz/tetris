@@ -47,6 +47,9 @@ export class HighLightAnimation
         const ctx = canvas.animation
         ctx.save()
         for (let p of this.positions) {
+            if (p[0] < constants.hiddenRows) {
+                continue
+            }
             let x = p[1] * this.blockSize + this.x
             let y = (p[0] - constants.hiddenRows) * this.blockSize + this.y
             if (this.progress <= this.firstPhase) {

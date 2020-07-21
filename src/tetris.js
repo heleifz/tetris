@@ -123,6 +123,14 @@ export class Tetris
         return this.regretCount
     }
 
+    getEndTime() {
+        if (this.endTime) {
+            return formatDate(new Date(this.endTime))
+        } else {
+            return null
+        }
+    }
+
     getUsedTime() {
         if (this.beginTime == null) {
             return ""
@@ -150,10 +158,15 @@ export class Tetris
             this.state = "over"
             this.endTime = Date.now()
             this.stopFallTimer()
+            this.updateScoreRank()
             this.onGameOver()
         } else {
             this.addSnapshot()
         }
+    }
+
+    isOver() {
+        return this.state == "over"
     }
 
     cannotFall() {
@@ -465,9 +478,12 @@ export class Tetris
         return JSON.parse(scores)
     }
 
-    addToScoreRank(score, useTime, clearLine) {
+    updateScoreRank() {
+        const score = this.getScore()
+        const useTime = this.getUsedTime()
+        const clearLine = this.getLineCount()
         let rank = this.getScoreRank()
-        let playedAt = formatDate(new Date())
+        const playedAt = this.getEndTime()
         rank.push({
             score: score, 
             useTime: useTime,

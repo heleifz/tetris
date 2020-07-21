@@ -18,7 +18,6 @@ export class HardDropAnimation
 
         this.boundary = this.getBoundary(x, y, blockSize, positions)
         this.clearBox = [this.boundary[1], y, this.boundary[2] - this.boundary[1], this.boundary[3] - y]
-        console.log(this.clearBox)
     }
 
     getBoundary(x, y, blockSize, positions) {

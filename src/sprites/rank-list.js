@@ -6,6 +6,11 @@ export class RankList {
         this.progress = 0
         this.duration = duration
         this.rank = []
+        this.score = 0
+        this.clearCount = 0
+        this.endTime = ""
+        this.visible = false
+        this.dirty = true
         this.relocate(x, y, width, height)
     }
 
@@ -17,15 +22,29 @@ export class RankList {
         this.dirty = true
     }
 
-    setRank(rank) {
-        this.rank = rank
+    setVisible(v) {
+        // 藏起后动画进度归零
+        if (!v && this.visible) {
+            this.progress = 0
+        }
+        this.visible = v
         this.dirty = true
+    } 
+
+    setRank(rank, score, clearCount, endTime) {
+        this.rank = rank
+        this.score = score
+        this.clearCount = clearCount
+        this.endTime = endTime
     }
 
     clear() {
         if (this.dirty) {
-            const ctx = canvas.sprite
-            ctx.clearRect(this.x, this.y, this.width, this.height)
+            const ctx = canvas.overlay
+            ctx.clearRect(this.x, Math.round(this.y * 0.8), this.width, Math.round(this.height * 1.2))
+            if (!this.visible) {
+                this.dirty = false
+            }
         }
     }
 
@@ -39,7 +58,7 @@ export class RankList {
         const startY = Math.round(y * 1.27)
         for (let i = 0; i < rankSize; ++i) {
             let item = rankList[i]
-            if (rankList[i].score == game.score) {
+            if (rankList[i].score == this.score) {
                 inRank = true
                 ctx.fillStyle = "rgba(200,0,0," + ((progress)/totalProgress) + ")";
             } else {
@@ -55,37 +74,37 @@ export class RankList {
         if (!inRank) {
             ctx.fillStyle = "rgba(200,0,0," + ((progress)/totalProgress) + ")";
             ctx.textAlign = "right";
-            ctx.fillText(game.score, middle - height * 0.35,  startY + fontSize * rankSize);
+            ctx.fillText(this.score, middle - height * 0.35,  startY + fontSize * rankSize);
             ctx.textAlign = "left";
-            ctx.fillText(game.clearCount, middle - height * 0.25,  startY + fontSize * rankSize);
+            ctx.fillText(this.clearCount, middle - height * 0.25,  startY + fontSize * rankSize);
             ctx.textAlign = "left";
-            ctx.fillText(formatDate(new Date()), middle, startY + fontSize * rankSize);
+            ctx.fillText(this.endTime, middle, startY + fontSize * rankSize);
         }
     }
 
     draw() {
-        if (this.dirty) {
-            const ctx = canvas.sprite
+        if (this.visible && this.dirty) {
+            const ctx = canvas.overlay
             const bannerHeight = this.height *  (this.progress / this.duration)
             const trans = 0.8 * (this.progress / this.duration)
             const fontSize = Math.round(bannerHeight * 0.12)
-            const bannerY = this.y + Math.round(bannerHeight / 2) * 0.8
+            const bannerY = this.y + Math.round((this.height - bannerHeight) / 2)
             ctx.save()
             ctx.fillStyle = "rgba(50,50,50," + trans + ")";
             ctx.fillRect(this.x, bannerY, this.width, bannerHeight)
 
             if (this.progress > 20) {
                 ctx.font = fontSize + "px ka1";
-                ctx.fillStyle = "rgba(251,226,81," + ((this.progress - 20)/20) + ")";
+                ctx.fillStyle = "rgba(251,226,81," + ((this.progress - 20)/(this.duration - 20)) + ")";
                 ctx.textAlign = "center";
-                ctx.fillText("GAME  OVER", this.width / 2,  bannerY * 1.05);
+                ctx.fillText("GAME OVER", Math.round(this.width / 2),  Math.round(bannerY * 1.05));
             }
             // 显示游戏排行榜
-            if (progress > 10) {
-                drawRankList(ctx, 0, bannerY, this.width, bannerHeight, 30, this.progress - 10)
+            if (this.progress > 10) {
+                this.drawRankList(ctx, 0, bannerY, this.width, bannerHeight, this.duration - 10, this.progress - 10)
             }
             if (this.progress < this.duration) {
-                progress += 1
+                this.progress += 1
             } else {
                 this.dirty = false
             }

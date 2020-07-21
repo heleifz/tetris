@@ -3,6 +3,7 @@ import { BlockField } from './block-field.js'
 import { Panel } from './panel.js'
 import { Board } from './board.js'
 import { BlockPanel } from './block-panel.js'
+import { RankList } from "./rank-list"
 
 export class GameUI
 {
@@ -16,6 +17,7 @@ export class GameUI
         this.timePanel = new Panel(0, 0, 0, 0, 0, "time", "")
         this.regretPanel = new Panel(0, 0, 0, 0, 0, "regret", "")
         this.holdPanel = new BlockPanel(0, 0, 0, 0, 0, "hold", [])
+        this.rankList = new RankList(0, 0, 0, 0, 30)
 
         this.children = [
             this.blockField, 
@@ -26,6 +28,7 @@ export class GameUI
             this.regretPanel,
             this.previewPanel,
             this.holdPanel,
+            this.rankList
         ]
         this.relocate(viewport)
     }
@@ -79,11 +82,22 @@ export class GameUI
         const holdHeight = Math.round(viewport.height * 0.15)
         this.holdPanel.relocate(titleX, holdY, titleWidth, holdHeight + titleHeight, titleHeight)
 
+        const rankHeight = Math.round(gameHeight * 0.5)
+        this.rankList.relocate(0, Math.round((viewport.height - rankHeight) / 2.0), viewport.width, rankHeight)
+
         this.gameX = gameX
         this.gameY = gameY
         this.gameWidth = gameWidth
         this.gameHeight = gameHeight
         this.blockSize = blockSize
+    }
+
+    showRankList() {
+        this.rankList.setVisible(true)
+    }
+
+    hideRankList() {
+        this.rankList.setVisible(false)
     }
 
     clear() {
@@ -109,5 +123,6 @@ export class GameUI
         this.regretPanel.setContent(t.getRegretCount())
         this.previewPanel.setBlocks(t.getNextBlocks())
         this.holdPanel.setBlocks(t.getHold())
+        this.rankList.setRank(t.getScoreRank(), t.getScore(), t.getLineCount(), t.getEndTime())
     }
 }

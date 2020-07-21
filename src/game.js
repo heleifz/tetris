@@ -34,7 +34,7 @@ class Game {
             }))
         }, 
         () => { 
-            console.log("gameover") 
+            this.gameUI.showRankList()
         }, (lockPositions) => {
             this.animation.add(new HardDropAnimation(this.gameUI.gameX, this.gameUI.gameY, 
                 this.gameUI.blockSize, lockPositions, 40))
@@ -57,7 +57,7 @@ class Game {
         this.inputs.push(inputMethod)
     }
 
-    // 暴力 layout
+    // 重新计算各个界面元素的位置
     relocate(setupCanvas) {
         const viewport = canvas.refreshViewPort(setupCanvas)
         if (setupCanvas) {
@@ -92,9 +92,14 @@ class Game {
             left: 1, right: 1, down: 1, clockwise: 1, counter_clockwise: 1,
             hard_drop: 1, hold: 1, regret: 1
         }
-        resource.sound.playBgmAtFirstTime(1)
-        if ((action in validAction)) {
-            this.tetris.control(action)
+        if (!this.tetris.isOver()) {
+            resource.sound.playBgmAtFirstTime(1)
+            if ((action in validAction)) {
+                this.tetris.control(action)
+            }
+        } else {
+            this.gameUI.hideRankList()
+            this.tetris.restart()
         }
     }
 }
